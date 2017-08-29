@@ -2,6 +2,7 @@ module Potok.Source where
 
 import Potok.Prelude
 import qualified Potok.Fetcher as A
+import qualified Potok.Stream as C
 import qualified Data.Attoparsec.Types as I
 import qualified Data.Attoparsec.ByteString as K
 import qualified Data.Attoparsec.Text as L
@@ -12,6 +13,34 @@ newtype Source element =
 
 deriving instance Functor Source
 
+instance Applicative Source where
+  pure x =
+    Source (\fetch -> fetch (pure x))
+  (<*>) (Source leftIO) (Source rightIO) =
+    Source (\fetch -> leftIO (\leftFetcher -> rightIO (\rightFetcher -> fetch (leftFetcher <*> rightFetcher))))
+
+instance Monad Source where
+  return = pure
+  (>>=) (Source leftIO) rightK =
+    Source $ \fetch ->
+    leftIO $ \(A.Fetcher sendLeft) ->
+    fetch $ 
+    A.Fetcher $ \sendEnd sendRightElement ->
+    sendLeft sendEnd $ \leftElement ->
+    case rightK leftElement of
+      Source rightIO ->
+        rightIO $ \(A.Fetcher sendRight) ->
+        sendRight sendEnd sendRightElement
+
+{-# INLINE fetcher #-}
+fetcher :: A.Fetcher element -> Source element
+fetcher fetcher =
+  Source (\fetch -> fetch fetcher)
+
+{-# INLINE stream #-}
+stream :: C.Stream input output -> Source input -> Source output
+stream (C.Stream streamIO) (Source sourceIO) =
+  Source (\outputFetcherHandlerIO -> sourceIO (\inputFetcher -> streamIO inputFetcher >>= outputFetcherHandlerIO))
 
 {-# INLINE mapWithParseResult #-}
 mapWithParseResult :: (input -> I.IResult input parsed) -> Source input -> Source (Either Text parsed)

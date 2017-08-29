@@ -1,19 +1,19 @@
 module Potok.Stream where
 
 import Potok.Prelude
-import qualified Potok.Source as A
+import qualified Potok.Fetcher as A
 import qualified Data.Attoparsec.ByteString as K
 import qualified Data.Attoparsec.Text as L
 
 
 newtype Stream input output =
-  Stream (A.Source input -> A.Source output)
+  Stream (A.Fetcher input -> IO (A.Fetcher output))
 
 instance Category Stream where
   id =
-    Stream id
+    Stream return
   (.) (Stream leftSourceUpdate) (Stream rightSourceUpdate) =
-    Stream (leftSourceUpdate . rightSourceUpdate)
+    Stream (leftSourceUpdate <=< rightSourceUpdate)
 
 {-|
 Lift an Attoparsec ByteString parser.

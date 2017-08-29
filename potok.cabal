@@ -60,7 +60,6 @@ library
   exposed-modules:
     Potok.Source
     Potok.Fetcher
-    Potok.AcquiredSink
     Potok.Sink
     Potok.Stream
   other-modules:

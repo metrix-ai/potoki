@@ -7,27 +7,30 @@ import qualified Data.Attoparsec.Text as L
 
 
 newtype Fetcher element =
+  {-|
+  Church encoding of @IO (Maybe element)@.
+  -}
   Fetcher (forall x. IO x -> (element -> IO x) -> IO x)
 
 instance Functor Fetcher where
-  fmap mapping (Fetcher sourceFn) =
-    Fetcher (\onEnd onElement -> sourceFn onEnd (onElement . mapping))
+  fmap mapping (Fetcher fetcherFn) =
+    Fetcher (\sendEnd sendElement -> fetcherFn sendEnd (sendElement . mapping))
 
 instance Applicative Fetcher where
   pure x =
-    Fetcher (\onEnd onElement -> onElement x)
+    Fetcher (\sendEnd sendElement -> sendElement x)
   (<*>) (Fetcher leftFn) (Fetcher rightFn) =
-    Fetcher (\onEnd onElement -> leftFn onEnd (\leftElement -> rightFn onEnd (\rightElement -> onElement (leftElement rightElement))))
+    Fetcher (\sendEnd sendElement -> leftFn sendEnd (\leftElement -> rightFn sendEnd (\rightElement -> sendElement (leftElement rightElement))))
 
 instance Monad Fetcher where
   return =
     pure
   (>>=) (Fetcher leftFn) rightK =
     Fetcher
-    (\onEnd onRightElement ->
-      leftFn onEnd
+    (\sendEnd onRightElement ->
+      leftFn sendEnd
       (\leftElement -> case rightK leftElement of
-        Fetcher rightFn -> rightFn onEnd onRightElement))
+        Fetcher rightFn -> rightFn sendEnd onRightElement))
 
 mapWithParseResult :: forall input parsed. (input -> I.IResult input parsed) -> Fetcher input -> IO (Fetcher (Either Text parsed))
 mapWithParseResult inputToResult (Fetcher fetchInput) =
@@ -81,3 +84,16 @@ parseText parser =
 duplicate :: Fetcher element -> IO (Fetcher element, Fetcher element)
 duplicate (Fetcher fetchInput) =
   undefined
+
+take :: Int -> Fetcher element -> IO (Fetcher element)
+take amount (Fetcher fetchInput) =
+  fetcher <$> newIORef amount
+  where
+    fetcher countRef =
+      Fetcher $ \sendEnd sendElement -> do
+        count <- readIORef countRef
+        if count > 0
+          then do
+            writeIORef countRef (pred count)
+            fetchInput sendEnd sendElement
+          else sendEnd

@@ -171,40 +171,32 @@ first inputUpdate (Fetch inputAndRightSignal) =
 left :: (Fetch input -> IO (Fetch output)) -> (Fetch (Either input right) -> IO (Fetch (Either output right)))
 left inputUpdate (Fetch inputOrRightSignal) =
   do
-    leftStateRef <- newIORef mempty
-    rightStateRef <- newIORef mempty
-    outputFetch <- inputUpdate (inputFetch rightStateRef)
-    return (outputOrRightFetch leftStateRef rightStateRef outputFetch)
+    bufferRef <- newIORef mempty
+    outputFetch <- inputUpdate (inputFetch bufferRef)
+    return (outputOrRightFetch bufferRef outputFetch)
   where
-    inputFetch rightStateRef =
+    inputFetch bufferRef =
       Fetch $ \signalEnd signalElement ->
       fix $ \loop ->
       inputOrRightSignal signalEnd $ \case
         Left input -> signalElement input
-        Right right -> modifyIORef rightStateRef (B.snoc right) >> loop
-    outputOrRightFetch leftStateRef rightStateRef (Fetch outputSignal) =
+        Right right -> modifyIORef bufferRef (B.snoc (Right right)) >> loop
+    outputOrRightFetch bufferRef (Fetch outputSignal) =
       Fetch $ \outputOrRightSignalEnd outputOrRightSignalElement ->
       do
-        rightState <- readIORef rightStateRef
-        case B.uncons rightState of
-          Just (right, tailRightState) -> do
-            writeIORef rightStateRef tailRightState
-            outputOrRightSignalElement (Right right)
+        buffer <- readIORef bufferRef
+        case B.uncons buffer of
+          Just (outputOrRight, tailRightState) -> do
+            writeIORef bufferRef tailRightState
+            outputOrRightSignalElement outputOrRight
           Nothing -> do
-            leftState <- readIORef leftStateRef
-            case B.uncons leftState of
-              Just (left, tailLeftState) -> do
-                writeIORef leftStateRef tailLeftState
-                outputOrRightSignalElement (Left left)
-              Nothing -> do
-                outputSignal outputOrRightSignalEnd $ \output -> do
-                  rightState <- readIORef rightStateRef
-                  case B.uncons rightState of
-                    Just (right, tailRightState) -> do
-                      writeIORef rightStateRef tailRightState
-                      modifyIORef leftStateRef (B.snoc output)
-                      outputOrRightSignalElement (Right right)
-                    Nothing -> outputOrRightSignalElement (Left output)
+            outputSignal outputOrRightSignalEnd $ \output -> do
+              buffer <- readIORef bufferRef
+              case B.uncons buffer of
+                Just (outputOrRight, tailRightState) -> do
+                  writeIORef bufferRef (B.snoc (Left output) tailRightState)
+                  outputOrRightSignalElement outputOrRight
+                Nothing -> outputOrRightSignalElement (Left output)
 
 mapFilter :: (input -> Maybe output) -> Fetch input -> Fetch output
 mapFilter mapping (Fetch fetch) =

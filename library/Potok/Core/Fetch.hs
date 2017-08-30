@@ -150,21 +150,23 @@ handleBytes handle chunkSize =
 
 first :: (Fetch input -> IO (Fetch output)) -> (Fetch (input, right) -> IO (Fetch (output, right)))
 first inputUpdate (Fetch inputAndRightSignal) =
-  outputAndRightFetch <$> newIORef Nothing
+  do
+    rightStateRef <- newIORef Nothing
+    outputFetch <- inputUpdate (inputFetch rightStateRef)
+    return (outputAndRightFetch rightStateRef outputFetch)
   where
-    outputAndRightFetch rightStateRef =
+    inputFetch rightStateRef =
+      Fetch $ \inputSignalEnd inputSignalElement ->
+      inputAndRightSignal inputSignalEnd $ \(input, right) -> do
+        writeIORef rightStateRef (Just right)
+        inputSignalElement input
+    outputAndRightFetch rightStateRef (Fetch outputSignal) =
       Fetch $ \outputAndRightSignalEnd outputAndRightSignalElement ->
-      do
-        Fetch outputSignal <-
-          inputUpdate $ Fetch $ \inputSignalEnd inputSignalElement ->
-          inputAndRightSignal inputSignalEnd $ \(input, right) -> do
-            writeIORef rightStateRef (Just right)
-            inputSignalElement input
-        outputSignal outputAndRightSignalEnd $ \output -> do
-          rightState <- readIORef rightStateRef
-          case rightState of
-            Just right -> outputAndRightSignalElement (output, right)
-            Nothing -> outputAndRightSignalEnd
+      outputSignal outputAndRightSignalEnd $ \output -> do
+        rightState <- readIORef rightStateRef
+        case rightState of
+          Just right -> outputAndRightSignalElement (output, right)
+          Nothing -> outputAndRightSignalEnd
 
 left :: (Fetch input -> IO (Fetch output)) -> (Fetch (Either input right) -> IO (Fetch (Either output right)))
 left inputUpdate (Fetch inputOrRightSignal) =

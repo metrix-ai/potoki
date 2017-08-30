@@ -3,8 +3,28 @@ name:
 version:
   0.1
 synopsis:
+  Simple streaming in IO
 description:
+  This library provides a new simpler approach to the IO-streaming problem.
+  .
+  In difference to libraries like \"pipes\", \"conduit\", \"streaming\",
+  this library is specialised to streaming in the IO monad,
+  which greatly simplifies the abstractions that it provides.
+  This simplification is motivated by the fact that the majority of streaming
+  tasks are performed in IO anyway.
+  .
+  Also, unlike the mentioned libraries,
+  \"potok\" API doesn't mix streaming with side operations,
+  which allows it to express the composition of streams using the standard
+  typeclass instances, thus simplifying the API even further.
+  .
+  In that regard it is similar to the \"io-streams\" library.
+  However, unlike that library it approaches composition with the standard typeclass instances.
+  Also in difference to it \"potok\" doesn't use exceptions for control-flow.
+  In fact, \"potok\" doesn't use exceptions whatsoever,
+  instead it encodes failures using the standard @Either@ type.
 category:
+  Streaming
 homepage:
   https://github.com/nikita-volkov/potok 
 bug-reports:

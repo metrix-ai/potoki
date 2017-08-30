@@ -91,4 +91,4 @@ fileBytes path =
 
 list :: [input] -> Produce input
 list list =
-  Produce (\fetch -> A.list list >>= fetch)
+  Produce (\fetch -> newIORef list >>= fetch . A.list)

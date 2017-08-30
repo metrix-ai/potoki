@@ -39,6 +39,24 @@ instance Alternative Fetch where
   (<|>) (Fetch leftSignal) (Fetch rightSignal) =
     Fetch (\signalEnd signalElement -> leftSignal (rightSignal signalEnd signalElement) signalElement)
 
+asMaybeIO :: Fetch element -> IO (Maybe element)
+asMaybeIO (Fetch signal) =
+  signal (pure Nothing) (pure . Just)
+
+maybeIO :: IO (Maybe element) -> Fetch element
+maybeIO maybeIO =
+  Fetch (\signalEnd signalElement -> maybeIO >>= maybe signalEnd signalElement)
+
+list :: IORef [input] -> Fetch input
+list unsentListRef =
+  Fetch $ \signalEnd signalElement -> do
+    list <- readIORef unsentListRef
+    case list of
+      head : tail -> do
+        writeIORef unsentListRef tail
+        signalElement head
+      _ -> signalEnd
+
 mapWithParseResult :: forall input parsed. (input -> I.IResult input parsed) -> Fetch input -> IO (Fetch (Either Text parsed))
 mapWithParseResult inputToResult (Fetch fetchInput) =
   do
@@ -129,14 +147,6 @@ handleBytes handle chunkSize =
       Right "" -> signalEnd
       _ -> signalElement element
 
-asMaybeIO :: Fetch element -> IO (Maybe element)
-asMaybeIO (Fetch signal) =
-  signal (pure Nothing) (pure . Just)
-
-maybeIO :: IO (Maybe element) -> Fetch element
-maybeIO maybeIO =
-  Fetch (\signalEnd signalElement -> maybeIO >>= maybe signalEnd signalElement)
-
 first :: (Fetch input -> IO (Fetch output)) -> (Fetch (input, right) -> IO (Fetch (output, right)))
 first inputUpdate (Fetch inputAndRightSignal) =
   outputAndRightFetch <$> newIORef Nothing
@@ -163,16 +173,3 @@ mapFilter mapping (Fetch fetch) =
   case mapping input of
     Just output -> signalOutput output
     Nothing -> loop
-
-list :: [input] -> IO (Fetch input)
-list list =
-  fetcher <$> newIORef list
-  where
-    fetcher unsentListRef =
-      Fetch $ \signalEnd signalElement -> do
-        list <- readIORef unsentListRef
-        case list of
-          head : tail -> do
-            writeIORef unsentListRef tail
-            signalElement head
-          _ -> signalEnd

@@ -18,11 +18,11 @@ description:
   which allows it to express the composition of streams using the standard
   typeclass instances, thus simplifying the API even further.
   .
-  In that regard it is similar to the \"io-streams\" library.
+  In some of the mentioned regards it is similar to the \"io-streams\" library.
   However, unlike that library it approaches composition with the standard typeclass instances.
-  Also in difference to it \"potok\" doesn't use exceptions for control-flow.
+  Also, in difference to \"io-streams\", \"potok\" doesn't use exceptions for control-flow.
   In fact, \"potok\" doesn't use exceptions whatsoever,
-  instead it encodes failures using the standard @Either@ type.
+  instead it makes failures explicit, using the standard @Either@ type.
 category:
   Streaming
 homepage:

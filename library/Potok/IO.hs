@@ -1,12 +1,12 @@
 module Potok.IO where
 
 import Potok.Prelude
-import qualified Potok.Core.Source as A
-import qualified Potok.Core.Sink as B
-import qualified Potok.Core.Stream as C
-import qualified Potok.Core.Fetcher as D
+import qualified Potok.Core.Produce as A
+import qualified Potok.Core.Consume as B
+import qualified Potok.Core.Transform as C
+import qualified Potok.Core.Fetch as D
 
 
-sinkSource :: A.Source input -> B.Sink input output -> IO output
-sinkSource (A.Source fetch) (B.Sink sink) =
-  fetch sink
+produceAndConsume :: A.Produce input -> B.Consume input output -> IO output
+produceAndConsume (A.Produce produce) (B.Consume consume) =
+  produce consume

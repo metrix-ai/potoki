@@ -1,7 +1,7 @@
 name:
   potok
 version:
-  0.1.2
+  0.2
 synopsis:
   Simple streaming in IO
 description:
@@ -66,14 +66,14 @@ library
     Haskell2010
   exposed-modules:
     Potok.IO
-    Potok.Source
-    Potok.Sink
-    Potok.Stream
+    Potok.Produce
+    Potok.Consume
+    Potok.Transform
   other-modules:
-    Potok.Core.Source
-    Potok.Core.Fetcher
-    Potok.Core.Sink
-    Potok.Core.Stream
+    Potok.Core.Produce
+    Potok.Core.Fetch
+    Potok.Core.Consume
+    Potok.Core.Transform
     Potok.Prelude
   build-depends:
     -- 

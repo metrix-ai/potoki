@@ -1,4 +1,4 @@
-module Potok.Core.Fetcher where
+module Potok.Core.Fetch where
 
 import Potok.Prelude
 import qualified Data.ByteString as A
@@ -7,43 +7,43 @@ import qualified Data.Attoparsec.ByteString as K
 import qualified Data.Attoparsec.Text as L
 
 
-newtype Fetcher element =
+newtype Fetch element =
   {-|
   Church encoding of @IO (Maybe element)@.
   -}
-  Fetcher (forall x. IO x -> (element -> IO x) -> IO x)
+  Fetch (forall x. IO x -> (element -> IO x) -> IO x)
 
-instance Functor Fetcher where
-  fmap mapping (Fetcher fetcherFn) =
-    Fetcher (\signalEnd signalElement -> fetcherFn signalEnd (signalElement . mapping))
+instance Functor Fetch where
+  fmap mapping (Fetch fetcherFn) =
+    Fetch (\signalEnd signalElement -> fetcherFn signalEnd (signalElement . mapping))
 
-instance Applicative Fetcher where
+instance Applicative Fetch where
   pure x =
-    Fetcher (\signalEnd signalElement -> signalElement x)
-  (<*>) (Fetcher leftFn) (Fetcher rightFn) =
-    Fetcher (\signalEnd signalElement -> leftFn signalEnd (\leftElement -> rightFn signalEnd (\rightElement -> signalElement (leftElement rightElement))))
+    Fetch (\signalEnd signalElement -> signalElement x)
+  (<*>) (Fetch leftFn) (Fetch rightFn) =
+    Fetch (\signalEnd signalElement -> leftFn signalEnd (\leftElement -> rightFn signalEnd (\rightElement -> signalElement (leftElement rightElement))))
 
-instance Monad Fetcher where
+instance Monad Fetch where
   return =
     pure
-  (>>=) (Fetcher leftFn) rightK =
-    Fetcher
+  (>>=) (Fetch leftFn) rightK =
+    Fetch
     (\signalEnd onRightElement ->
       leftFn signalEnd
       (\leftElement -> case rightK leftElement of
-        Fetcher rightFn -> rightFn signalEnd onRightElement))
+        Fetch rightFn -> rightFn signalEnd onRightElement))
 
-instance Alternative Fetcher where
+instance Alternative Fetch where
   empty =
-    Fetcher (\signalEnd signalElement -> signalEnd)
-  (<|>) (Fetcher leftSignal) (Fetcher rightSignal) =
-    Fetcher (\signalEnd signalElement -> leftSignal (rightSignal signalEnd signalElement) signalElement)
+    Fetch (\signalEnd signalElement -> signalEnd)
+  (<|>) (Fetch leftSignal) (Fetch rightSignal) =
+    Fetch (\signalEnd signalElement -> leftSignal (rightSignal signalEnd signalElement) signalElement)
 
-mapWithParseResult :: forall input parsed. (input -> I.IResult input parsed) -> Fetcher input -> IO (Fetcher (Either Text parsed))
-mapWithParseResult inputToResult (Fetcher fetchInput) =
+mapWithParseResult :: forall input parsed. (input -> I.IResult input parsed) -> Fetch input -> IO (Fetch (Either Text parsed))
+mapWithParseResult inputToResult (Fetch fetchInput) =
   do
     unconsumedStateRef <- newIORef Nothing
-    return (Fetcher (fetchParsed unconsumedStateRef))
+    return (Fetch (fetchParsed unconsumedStateRef))
   where
     fetchParsed :: IORef (Maybe input) -> IO x -> (Either Text parsed -> IO x) -> IO x
     fetchParsed unconsumedStateRef onParsedEnd onParsedElement =
@@ -74,7 +74,7 @@ Lift an Attoparsec ByteString parser.
 Consumption is non-greedy and terminates when the parser is done.
 -}
 {-# INLINE parseBytes #-}
-parseBytes :: K.Parser parsed -> Fetcher ByteString -> IO (Fetcher (Either Text parsed))
+parseBytes :: K.Parser parsed -> Fetch ByteString -> IO (Fetch (Either Text parsed))
 parseBytes parser =
   mapWithParseResult (K.parse parser)
 
@@ -84,20 +84,20 @@ Lift an Attoparsec Text parser.
 Consumption is non-greedy and terminates when the parser is done.
 -}
 {-# INLINE parseText #-}
-parseText :: L.Parser parsed -> Fetcher Text -> IO (Fetcher (Either Text parsed))
+parseText :: L.Parser parsed -> Fetch Text -> IO (Fetch (Either Text parsed))
 parseText parser =
   mapWithParseResult (L.parse parser)
 
-duplicate :: Fetcher element -> IO (Fetcher element, Fetcher element)
-duplicate (Fetcher fetchInput) =
+duplicate :: Fetch element -> IO (Fetch element, Fetch element)
+duplicate (Fetch fetchInput) =
   undefined
 
-take :: Int -> Fetcher element -> IO (Fetcher element)
-take amount (Fetcher fetchInput) =
+take :: Int -> Fetch element -> IO (Fetch element)
+take amount (Fetch fetchInput) =
   fetcher <$> newIORef amount
   where
     fetcher countRef =
-      Fetcher $ \signalEnd signalElement -> do
+      Fetch $ \signalEnd signalElement -> do
         count <- readIORef countRef
         if count > 0
           then do
@@ -105,47 +105,47 @@ take amount (Fetcher fetchInput) =
             fetchInput signalEnd signalElement
           else signalEnd
 
-sink :: (Fetcher input -> IO output) -> Fetcher input -> IO (Fetcher output)
-sink sink (Fetcher signal) =
+consume :: (Fetch input -> IO output) -> Fetch input -> IO (Fetch output)
+consume consume (Fetch signal) =
   fetcher <$> newIORef False
   where
     fetcher finishedRef =
-      Fetcher $ \signalEnd signalOutput -> do
+      Fetch $ \signalEnd signalOutput -> do
         finished <- readIORef finishedRef
         if finished
           then signalEnd
           else do
             output <-
-              sink $ Fetcher $ \sinkSignalEnd sinkSignalInput ->
-              signal (writeIORef finishedRef True >> sinkSignalEnd) sinkSignalInput
+              consume $ Fetch $ \consumeSignalEnd consumeSignalInput ->
+              signal (writeIORef finishedRef True >> consumeSignalEnd) consumeSignalInput
             signalOutput output
 
-handleBytes :: Handle -> Int -> Fetcher (Either IOException ByteString)
+handleBytes :: Handle -> Int -> Fetch (Either IOException ByteString)
 handleBytes handle chunkSize =
-  Fetcher $ \signalEnd signalElement ->
+  Fetch $ \signalEnd signalElement ->
   do
     element <- try (A.hGetSome handle chunkSize)
     case element of
       Right "" -> signalEnd
       _ -> signalElement element
 
-asMaybeIO :: Fetcher element -> IO (Maybe element)
-asMaybeIO (Fetcher signal) =
+asMaybeIO :: Fetch element -> IO (Maybe element)
+asMaybeIO (Fetch signal) =
   signal (pure Nothing) (pure . Just)
 
-maybeIO :: IO (Maybe element) -> Fetcher element
+maybeIO :: IO (Maybe element) -> Fetch element
 maybeIO maybeIO =
-  Fetcher (\signalEnd signalElement -> maybeIO >>= maybe signalEnd signalElement)
+  Fetch (\signalEnd signalElement -> maybeIO >>= maybe signalEnd signalElement)
 
-first :: (Fetcher input -> IO (Fetcher output)) -> (Fetcher (input, right) -> IO (Fetcher (output, right)))
-first inputUpdate (Fetcher inputAndRightSignal) =
-  outputAndRightFetcher <$> newIORef Nothing
+first :: (Fetch input -> IO (Fetch output)) -> (Fetch (input, right) -> IO (Fetch (output, right)))
+first inputUpdate (Fetch inputAndRightSignal) =
+  outputAndRightFetch <$> newIORef Nothing
   where
-    outputAndRightFetcher rightStateRef =
-      Fetcher $ \outputAndRightSignalEnd outputAndRightSignalElement ->
+    outputAndRightFetch rightStateRef =
+      Fetch $ \outputAndRightSignalEnd outputAndRightSignalElement ->
       do
-        Fetcher outputSignal <-
-          inputUpdate $ Fetcher $ \inputSignalEnd inputSignalElement ->
+        Fetch outputSignal <-
+          inputUpdate $ Fetch $ \inputSignalEnd inputSignalElement ->
           inputAndRightSignal inputSignalEnd $ \(input, right) -> do
             writeIORef rightStateRef (Just right)
             inputSignalElement input
@@ -155,21 +155,21 @@ first inputUpdate (Fetcher inputAndRightSignal) =
             Just right -> outputAndRightSignalElement (output, right)
             Nothing -> outputAndRightSignalEnd
 
-mapFilter :: (input -> Maybe output) -> Fetcher input -> Fetcher output
-mapFilter mapping (Fetcher fetch) =
-  Fetcher $ \signalEnd signalOutput ->
+mapFilter :: (input -> Maybe output) -> Fetch input -> Fetch output
+mapFilter mapping (Fetch fetch) =
+  Fetch $ \signalEnd signalOutput ->
   fix $ \loop ->
   fetch signalEnd $ \input ->
   case mapping input of
     Just output -> signalOutput output
     Nothing -> loop
 
-list :: [input] -> IO (Fetcher input)
+list :: [input] -> IO (Fetch input)
 list list =
   fetcher <$> newIORef list
   where
     fetcher unsentListRef =
-      Fetcher $ \signalEnd signalElement -> do
+      Fetch $ \signalEnd signalElement -> do
         list <- readIORef unsentListRef
         case list of
           head : tail -> do

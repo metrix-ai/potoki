@@ -23,12 +23,19 @@ instance Strong Transform where
   first' (Transform io) =
     Transform (A.first io) 
 
+instance Choice Transform where
+  left' (Transform io) =
+    Transform (A.left io)
+
 instance Arrow Transform where
   arr fn =
     Transform (pure . fmap fn)
-  first (Transform io) =
-    Transform (A.first io)
+  first =
+    first'
 
+instance ArrowChoice Transform where
+  left =
+    left'
 
 {-|
 Lift an Attoparsec ByteString parser.

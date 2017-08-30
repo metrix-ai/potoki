@@ -165,6 +165,29 @@ first inputUpdate (Fetch inputAndRightSignal) =
             Just right -> outputAndRightSignalElement (output, right)
             Nothing -> outputAndRightSignalEnd
 
+left :: (Fetch input -> IO (Fetch output)) -> (Fetch (Either input right) -> IO (Fetch (Either output right)))
+left inputUpdate (Fetch inputOrRightSignal) =
+  outputOrRightFetch <$> newIORef Nothing
+  where
+    outputOrRightFetch rightStateRef =
+      Fetch $ \outputOrRightSignalEnd outputOrRightSignalElement ->
+      do
+        Fetch outputSignal <-
+          inputUpdate $ Fetch $ \inputSignalEnd inputSignalElement ->
+          inputOrRightSignal inputSignalEnd $ \case
+            Left input -> inputSignalElement input
+            Right right -> writeIORef rightStateRef (Just right) >> inputSignalEnd
+        let
+          signalEnd =
+            do
+              rightState <- readIORef rightStateRef
+              case rightState of
+                Just right -> outputOrRightSignalElement (Right right)
+                Nothing -> outputOrRightSignalEnd
+          signalElement =
+            outputOrRightSignalElement . Left
+          in outputSignal signalEnd signalElement
+
 mapFilter :: (input -> Maybe output) -> Fetch input -> Fetch output
 mapFilter mapping (Fetch fetch) =
   Fetch $ \signalEnd signalOutput ->

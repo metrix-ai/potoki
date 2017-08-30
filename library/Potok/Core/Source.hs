@@ -31,6 +31,12 @@ instance Monad Source where
         rightIO $ \(A.Fetcher sendRight) ->
         sendRight sendEnd sendRightElement
 
+instance Alternative Source where
+  empty =
+    Source (\fetch -> fetch empty)
+  (<|>) (Source leftIO) (Source rightIO) =
+    Source (\fetch -> leftIO (\leftFetcher -> rightIO (\rightFetcher -> fetch (leftFetcher <|> rightFetcher))))
+
 {-# INLINE fetcher #-}
 fetcher :: A.Fetcher element -> Source element
 fetcher fetcher =

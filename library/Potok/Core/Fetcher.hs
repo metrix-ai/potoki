@@ -1,6 +1,7 @@
 module Potok.Core.Fetcher where
 
 import Potok.Prelude
+import qualified Data.ByteString as A
 import qualified Data.Attoparsec.Types as I
 import qualified Data.Attoparsec.ByteString as K
 import qualified Data.Attoparsec.Text as L
@@ -118,3 +119,12 @@ sink sink (Fetcher signal) =
               sink $ Fetcher $ \sinkSignalEnd sinkSignalInput ->
               signal (writeIORef finishedRef True >> sinkSignalEnd) sinkSignalInput
             signalOutput output
+
+handleBytes :: Handle -> Int -> Fetcher (Either IOException ByteString)
+handleBytes handle chunkSize =
+  Fetcher $ \signalEnd signalElement ->
+  do
+    element <- try (A.hGetSome handle chunkSize)
+    case element of
+      Right "" -> signalEnd
+      _ -> signalElement element

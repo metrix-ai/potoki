@@ -7,6 +7,7 @@ where
 -- base
 -------------------------
 import Data.Functor.Compose as Exports
+import System.IO as Exports
 
 -- base-prelude
 -------------------------

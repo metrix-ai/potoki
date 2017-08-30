@@ -2,6 +2,7 @@ module Potok.Source
 (
   A.Source,
   stream,
+  A.fileBytes,
 )
 where
 

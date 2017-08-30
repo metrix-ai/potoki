@@ -5,6 +5,7 @@ module Potok.Sink
   B.head,
   B.list,
   B.reverseList,
+  B.writeBytesToFile,
 )
 where
 

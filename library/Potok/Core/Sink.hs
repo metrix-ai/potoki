@@ -3,6 +3,7 @@ module Potok.Core.Sink where
 import Potok.Prelude
 import qualified Potok.Core.Fetcher as A
 import qualified Control.Concurrent.Async as B
+import qualified Data.ByteString as C
 
 
 {-|
@@ -40,3 +41,20 @@ reverseList =
   where
     build send acc =
       send (pure acc) (\element -> build send (element : acc))
+
+{-|
+Overwrite a file.
+
+* Exception-free
+* Automatic resource management
+-}
+writeBytesToFile :: FilePath -> Sink ByteString (Maybe IOException)
+writeBytesToFile path =
+  Sink $ \(A.Fetcher send) -> do
+    exceptionOrUnit <- try $ withFile path WriteMode $ \handle -> write handle send
+    case exceptionOrUnit of
+      Left exception -> return (Just exception)
+      Right () -> return Nothing
+  where
+    write handle send =
+      fix (\loop -> send (return ()) (\bytes -> C.hPut handle bytes >> loop))

@@ -70,3 +70,21 @@ Consumption is non-greedy and terminates when the parser is done.
 parseText :: L.Parser parsed -> Source Text -> Source (Either Text parsed)
 parseText parser =
   mapWithParseResult (L.parse parser)
+
+{-|
+Read from a file by path.
+
+* Exception-free
+* Automatic resource management
+-}
+{-# INLINABLE fileBytes #-}
+fileBytes :: FilePath -> Source (Either IOException ByteString)
+fileBytes path =
+  Source $ \fetch -> do
+    exceptionOrResult <- try $ withFile path ReadMode $ \handle -> fetch $ A.handleBytes handle chunkSize
+    case exceptionOrResult of
+      Left exception -> fetch (pure (Left exception))
+      Right result -> return result
+  where
+    chunkSize =
+      shiftL 2 12

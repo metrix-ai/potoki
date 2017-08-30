@@ -58,11 +58,11 @@ library
   default-language:
     Haskell2010
   exposed-modules:
-    Potok.Source
-    Potok.Fetcher
-    Potok.Sink
-    Potok.Stream
   other-modules:
+    Potok.Core.Source
+    Potok.Core.Fetcher
+    Potok.Core.Sink
+    Potok.Core.Stream
     Potok.Prelude
   build-depends:
     -- 

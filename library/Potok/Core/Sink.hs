@@ -1,8 +1,8 @@
-module Potok.Sink where
+module Potok.Core.Sink where
 
 import Potok.Prelude
-import qualified Potok.Fetcher as A
-import qualified Potok.Stream as C
+import qualified Potok.Core.Fetcher as A
+import qualified Potok.Core.Stream as C
 import qualified Control.Concurrent.Async as B
 
 

@@ -1,4 +1,4 @@
-module Potok.Fetcher where
+module Potok.Core.Fetcher where
 
 import Potok.Prelude
 import qualified Data.Attoparsec.Types as I

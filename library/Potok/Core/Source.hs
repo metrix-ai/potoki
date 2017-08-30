@@ -1,8 +1,8 @@
-module Potok.Source where
+module Potok.Core.Source where
 
 import Potok.Prelude
-import qualified Potok.Fetcher as A
-import qualified Potok.Stream as C
+import qualified Potok.Core.Fetcher as A
+import qualified Potok.Core.Stream as C
 import qualified Data.Attoparsec.Types as I
 import qualified Data.Attoparsec.ByteString as K
 import qualified Data.Attoparsec.Text as L

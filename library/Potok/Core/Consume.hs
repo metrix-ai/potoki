@@ -41,7 +41,7 @@ list =
   Consume $ \(A.Fetch send) -> build send id
   where
     build send acc =
-      send (pure (acc [])) (\element -> build send ((:) element . acc))
+      send (pure (acc [])) (\element -> build send (acc . (:) element))
 
 {-|
 A faster alternative to "list",

@@ -2,7 +2,6 @@ module Potok.Core.Source where
 
 import Potok.Prelude
 import qualified Potok.Core.Fetcher as A
-import qualified Potok.Core.Stream as C
 import qualified Data.Attoparsec.Types as I
 import qualified Data.Attoparsec.ByteString as K
 import qualified Data.Attoparsec.Text as L
@@ -36,11 +35,6 @@ instance Monad Source where
 fetcher :: A.Fetcher element -> Source element
 fetcher fetcher =
   Source (\fetch -> fetch fetcher)
-
-{-# INLINE stream #-}
-stream :: C.Stream input output -> Source input -> Source output
-stream (C.Stream streamIO) (Source sourceIO) =
-  Source (\outputFetcherHandlerIO -> sourceIO (\inputFetcher -> streamIO inputFetcher >>= outputFetcherHandlerIO))
 
 {-# INLINE mapWithParseResult #-}
 mapWithParseResult :: (input -> I.IResult input parsed) -> Source input -> Source (Either Text parsed)

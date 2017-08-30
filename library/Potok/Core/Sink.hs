@@ -2,7 +2,6 @@ module Potok.Core.Sink where
 
 import Potok.Prelude
 import qualified Potok.Core.Fetcher as A
-import qualified Potok.Core.Stream as C
 import qualified Control.Concurrent.Async as B
 
 
@@ -16,11 +15,6 @@ newtype Sink input output =
   -}
   Sink (A.Fetcher input -> IO output)
 
-
-{-# INLINE stream #-}
-stream :: C.Stream streamInput streamOutput -> Sink streamOutput output -> Sink streamInput output
-stream (C.Stream streamIO) (Sink sinkIO) =
-  Sink (streamIO >=> sinkIO)
 
 {-# INLINE head #-}
 head :: Sink input (Maybe input)

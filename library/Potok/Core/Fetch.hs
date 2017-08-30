@@ -185,21 +185,26 @@ left inputUpdate (Fetch inputOrRightSignal) =
     outputOrRightFetch leftStateRef rightStateRef (Fetch outputSignal) =
       Fetch $ \outputOrRightSignalEnd outputOrRightSignalElement ->
       do
-        leftState <- readIORef leftStateRef
-        case B.uncons leftState of
-          Just (left, tailLeftState) -> do
-            writeIORef leftStateRef tailLeftState
-            outputOrRightSignalElement (Left left)
-          Nothing ->
-            outputSignal outputOrRightSignalEnd $ \output -> do
-              rightState <- readIORef rightStateRef
-              case B.uncons rightState of
-                Just (right, tailRightState) -> do
-                  writeIORef rightStateRef tailRightState
-                  modifyIORef leftStateRef (B.snoc output)
-                  outputOrRightSignalElement (Right right)
-                Nothing -> outputOrRightSignalElement (Left output)
-
+        rightState <- readIORef rightStateRef
+        case B.uncons rightState of
+          Just (right, tailRightState) -> do
+            writeIORef rightStateRef tailRightState
+            outputOrRightSignalElement (Right right)
+          Nothing -> do
+            leftState <- readIORef leftStateRef
+            case B.uncons leftState of
+              Just (left, tailLeftState) -> do
+                writeIORef leftStateRef tailLeftState
+                outputOrRightSignalElement (Left left)
+              Nothing -> do
+                outputSignal outputOrRightSignalEnd $ \output -> do
+                  rightState <- readIORef rightStateRef
+                  case B.uncons rightState of
+                    Just (right, tailRightState) -> do
+                      writeIORef rightStateRef tailRightState
+                      modifyIORef leftStateRef (B.snoc output)
+                      outputOrRightSignalElement (Right right)
+                    Nothing -> outputOrRightSignalElement (Left output)
 
 mapFilter :: (input -> Maybe output) -> Fetch input -> Fetch output
 mapFilter mapping (Fetch fetch) =

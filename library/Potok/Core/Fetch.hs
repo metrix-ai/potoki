@@ -2,6 +2,7 @@ module Potok.Core.Fetch where
 
 import Potok.Prelude
 import qualified Data.ByteString as A
+import qualified Deque as B
 import qualified Data.Attoparsec.Types as I
 import qualified Data.Attoparsec.ByteString as K
 import qualified Data.Attoparsec.Text as L
@@ -167,26 +168,27 @@ first inputUpdate (Fetch inputAndRightSignal) =
 
 left :: (Fetch input -> IO (Fetch output)) -> (Fetch (Either input right) -> IO (Fetch (Either output right)))
 left inputUpdate (Fetch inputOrRightSignal) =
-  outputOrRightFetch <$> newIORef Nothing
+  do
+    rightStateRef <- newIORef mempty
+    outputFetch <- inputUpdate (inputFetch rightStateRef)
+    return (outputOrRightFetch rightStateRef outputFetch)
   where
-    outputOrRightFetch rightStateRef =
+    inputFetch rightStateRef =
+      Fetch $ \signalEnd signalElement ->
+      fix $ \loop ->
+      inputOrRightSignal signalEnd $ \case
+        Left input -> signalElement input
+        Right right -> modifyIORef rightStateRef (B.snoc right) >> loop
+    outputOrRightFetch rightStateRef (Fetch outputSignal) =
       Fetch $ \outputOrRightSignalEnd outputOrRightSignalElement ->
       do
-        Fetch outputSignal <-
-          inputUpdate $ Fetch $ \inputSignalEnd inputSignalElement ->
-          inputOrRightSignal inputSignalEnd $ \case
-            Left input -> inputSignalElement input
-            Right right -> writeIORef rightStateRef (Just right) >> inputSignalEnd
-        let
-          signalEnd =
-            do
-              rightState <- readIORef rightStateRef
-              case rightState of
-                Just right -> outputOrRightSignalElement (Right right)
-                Nothing -> outputOrRightSignalEnd
-          signalElement =
-            outputOrRightSignalElement . Left
-          in outputSignal signalEnd signalElement
+        rightState <- readIORef rightStateRef
+        case B.uncons rightState of
+          Just (right, tailRightState) -> do
+            writeIORef rightStateRef tailRightState
+            outputOrRightSignalElement (Right right)
+          Nothing -> do
+            outputSignal outputOrRightSignalEnd (outputOrRightSignalElement . Left)
 
 mapFilter :: (input -> Maybe output) -> Fetch input -> Fetch output
 mapFilter mapping (Fetch fetch) =

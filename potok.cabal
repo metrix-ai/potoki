@@ -81,6 +81,7 @@ library
     -- 
     text >=1 && <2,
     bytestring ==0.10.*,
+    deque >=0.2 && <0.3,
     -- 
     async >=2.1 && <3,
     -- 

@@ -5,6 +5,7 @@ module Potok.Consume
   B.head,
   B.list,
   B.reverseList,
+  B.sum,
   B.writeBytesToFile,
 )
 where

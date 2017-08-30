@@ -55,6 +55,13 @@ reverseList =
     build send acc =
       send (pure acc) (\element -> build send (element : acc))
 
+sum :: Num a => Consume a a
+sum =
+  Consume $ \(A.Fetch send) -> build send 0
+  where
+    build send acc =
+      send (pure acc) (\x -> build send (x + acc))
+
 {-|
 Overwrite a file.
 

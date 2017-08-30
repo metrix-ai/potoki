@@ -128,3 +128,29 @@ handleBytes handle chunkSize =
     case element of
       Right "" -> signalEnd
       _ -> signalElement element
+
+asMaybeIO :: Fetcher element -> IO (Maybe element)
+asMaybeIO (Fetcher signal) =
+  signal (pure Nothing) (pure . Just)
+
+maybeIO :: IO (Maybe element) -> Fetcher element
+maybeIO maybeIO =
+  Fetcher (\signalEnd signalElement -> maybeIO >>= maybe signalEnd signalElement)
+
+first :: (Fetcher input -> IO (Fetcher output)) -> (Fetcher (input, right) -> IO (Fetcher (output, right)))
+first inputUpdate (Fetcher inputAndRightSignal) =
+  outputAndRightFetcher <$> newIORef Nothing
+  where
+    outputAndRightFetcher rightStateRef =
+      Fetcher $ \outputAndRightSignalEnd outputAndRightSignalElement ->
+      do
+        Fetcher outputSignal <-
+          inputUpdate $ Fetcher $ \inputSignalEnd inputSignalElement ->
+          inputAndRightSignal inputSignalEnd $ \(input, right) -> do
+            writeIORef rightStateRef (Just right)
+            inputSignalElement input
+        outputSignal outputAndRightSignalEnd $ \output -> do
+          rightState <- readIORef rightStateRef
+          case rightState of
+            Just right -> outputAndRightSignalElement (output, right)
+            Nothing -> outputAndRightSignalEnd

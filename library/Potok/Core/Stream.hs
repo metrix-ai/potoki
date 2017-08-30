@@ -12,8 +12,23 @@ newtype Stream input output =
 instance Category Stream where
   id =
     Stream return
-  (.) (Stream leftSourceUpdate) (Stream rightSourceUpdate) =
-    Stream (leftSourceUpdate <=< rightSourceUpdate)
+  (.) (Stream leftFetcherIO) (Stream rightFetcherIO) =
+    Stream (leftFetcherIO <=< rightFetcherIO)
+
+instance Profunctor Stream where
+  dimap inputMapping outputMapping (Stream fetcherIO) =
+    Stream (\inputFetcher -> (fmap . fmap) outputMapping (fetcherIO (fmap inputMapping inputFetcher)))
+
+instance Strong Stream where
+  first' (Stream io) =
+    Stream (A.first io) 
+
+instance Arrow Stream where
+  arr fn =
+    Stream (pure . fmap fn)
+  first (Stream io) =
+    Stream (A.first io)
+
 
 {-|
 Lift an Attoparsec ByteString parser.

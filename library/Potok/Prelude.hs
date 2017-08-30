@@ -8,10 +8,11 @@ where
 -------------------------
 import Data.Functor.Compose as Exports
 import System.IO as Exports
+import Control.Arrow as Exports (first, second)
 
 -- base-prelude
 -------------------------
-import BasePrelude as Exports hiding (second)
+import BasePrelude as Exports hiding (first, second)
 
 -- contravariant
 -------------------------

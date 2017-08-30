@@ -54,8 +54,8 @@ parseText parser =
   Transform (A.parseText parser)
 
 take :: Int -> Transform input input
-take =
-  undefined
+take amount =
+  Transform (A.take amount)
 
 {-# INLINE mapFilter #-}
 mapFilter :: (input -> Maybe output) -> Transform input output

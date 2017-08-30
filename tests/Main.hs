@@ -69,6 +69,20 @@ transformArrowLaws =
 transformArrowChoiceLaws =
   testGroup "Transform ArrowChoice laws"
   [
+    testCase "" $ do
+      let
+        list = [Right 'a',Left 0]
+        transform = left (arr f) >>> left (arr g)
+      result <- C.produceAndConsume (E.list list) (D.transform transform D.list)
+      assertEqual "" [Right 'a', Left 72] result
+    ,
+    testCase "" $ do
+      let
+        list = [Right 'a',Left 0]
+        transform = left (arr f >>> arr g)
+      result <- C.produceAndConsume (E.list list) (D.transform transform D.list)
+      assertEqual "" [Right 'a', Left 72] result
+    ,
     transformProperty "left (arr f) = arr (left f)"
       (left (arr f) :: A.Transform (Either Int Char) (Either Int Char))
       (arr (left f))

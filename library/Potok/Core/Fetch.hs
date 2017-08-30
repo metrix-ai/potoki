@@ -171,9 +171,10 @@ first inputUpdate (Fetch inputAndRightSignal) =
 left :: (Fetch input -> IO (Fetch output)) -> (Fetch (Either input right) -> IO (Fetch (Either output right)))
 left inputUpdate (Fetch inputOrRightSignal) =
   do
+    leftStateRef <- newIORef mempty
     rightStateRef <- newIORef mempty
     outputFetch <- inputUpdate (inputFetch rightStateRef)
-    return (outputOrRightFetch rightStateRef outputFetch)
+    return (outputOrRightFetch leftStateRef rightStateRef outputFetch)
   where
     inputFetch rightStateRef =
       Fetch $ \signalEnd signalElement ->
@@ -181,16 +182,24 @@ left inputUpdate (Fetch inputOrRightSignal) =
       inputOrRightSignal signalEnd $ \case
         Left input -> signalElement input
         Right right -> modifyIORef rightStateRef (B.snoc right) >> loop
-    outputOrRightFetch rightStateRef (Fetch outputSignal) =
+    outputOrRightFetch leftStateRef rightStateRef (Fetch outputSignal) =
       Fetch $ \outputOrRightSignalEnd outputOrRightSignalElement ->
       do
-        rightState <- readIORef rightStateRef
-        case B.uncons rightState of
-          Just (right, tailRightState) -> do
-            writeIORef rightStateRef tailRightState
-            outputOrRightSignalElement (Right right)
-          Nothing -> do
-            outputSignal outputOrRightSignalEnd (outputOrRightSignalElement . Left)
+        leftState <- readIORef leftStateRef
+        case B.uncons leftState of
+          Just (left, tailLeftState) -> do
+            writeIORef leftStateRef tailLeftState
+            outputOrRightSignalElement (Left left)
+          Nothing ->
+            outputSignal outputOrRightSignalEnd $ \output -> do
+              rightState <- readIORef rightStateRef
+              case B.uncons rightState of
+                Just (right, tailRightState) -> do
+                  writeIORef rightStateRef tailRightState
+                  modifyIORef leftStateRef (B.snoc output)
+                  outputOrRightSignalElement (Right right)
+                Nothing -> outputOrRightSignalElement (Left output)
+
 
 mapFilter :: (input -> Maybe output) -> Fetch input -> Fetch output
 mapFilter mapping (Fetch fetch) =

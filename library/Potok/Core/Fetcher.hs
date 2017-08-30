@@ -154,3 +154,12 @@ first inputUpdate (Fetcher inputAndRightSignal) =
           case rightState of
             Just right -> outputAndRightSignalElement (output, right)
             Nothing -> outputAndRightSignalEnd
+
+mapFilter :: (input -> Maybe output) -> Fetcher input -> Fetcher output
+mapFilter mapping (Fetcher fetch) =
+  Fetcher $ \signalEnd signalOutput ->
+  fix $ \loop ->
+  fetch signalEnd $ \input ->
+  case mapping input of
+    Just output -> signalOutput output
+    Nothing -> loop

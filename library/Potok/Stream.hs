@@ -4,6 +4,7 @@ module Potok.Stream
   sink,
   C.parseBytes,
   C.parseText,
+  C.mapFilter,
   C.take,
 )
 where

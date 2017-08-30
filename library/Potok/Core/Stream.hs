@@ -53,3 +53,8 @@ parseText parser =
 take :: Int -> Stream input input
 take =
   undefined
+
+{-# INLINE mapFilter #-}
+mapFilter :: (input -> Maybe output) -> Stream input output
+mapFilter mapping =
+  Stream (pure . A.mapFilter mapping)

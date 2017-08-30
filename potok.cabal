@@ -58,6 +58,10 @@ library
   default-language:
     Haskell2010
   exposed-modules:
+    Potok.IO
+    Potok.Source
+    Potok.Sink
+    Potok.Stream
   other-modules:
     Potok.Core.Source
     Potok.Core.Fetcher

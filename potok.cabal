@@ -18,6 +18,13 @@ description:
   which allows it to express the composition of streams using the standard
   typeclass instances, thus simplifying the API even further.
   .
+  Naturally, being simpler limits the application area of this library.
+  Thus it is not capable of transforming custom context monads and etc.
+  It is a tradeoff.
+  .
+  Another benefit of being specialized to IO is the ability to optimize for performance better.
+  It must however be mentioned that this is only theoretical and no benchmarks have yet been performed.
+  .
   In some of the mentioned regards it is similar to the \"io-streams\" library.
   However, unlike that library it approaches composition with the standard typeclass instances.
   Also, in difference to \"io-streams\", \"potok\" doesn't use exceptions for control-flow.

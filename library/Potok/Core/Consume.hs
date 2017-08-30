@@ -16,6 +16,19 @@ newtype Consume input output =
   -}
   Consume (A.Fetch input -> IO output)
 
+instance Profunctor Consume where
+  {-# INLINE dimap #-}
+  dimap inputMapping outputMapping (Consume consume) =
+    Consume (\fetch -> fmap outputMapping (consume (fmap inputMapping fetch)))
+
+instance Functor (Consume input) where
+  fmap = rmap
+
+instance Applicative (Consume input) where
+  pure x =
+    Consume (const (pure x))
+  (<*>) (Consume leftConsume) (Consume rightConsume) =
+    Consume (\fetch -> leftConsume fetch <*> rightConsume fetch)
 
 {-# INLINE head #-}
 head :: Consume input (Maybe input)

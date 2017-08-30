@@ -82,8 +82,8 @@ transformArrowLaws =
   where
     f = (+24) :: Int -> Int
     g = (*3) :: Int -> Int
-    transform1 = A.take 3 >>> arr f
-    transform2 = A.take 2 >>> arr g
+    transform1 = A.take 3 >>> A.consume D.sum :: A.Transform Int Int
+    transform2 = A.take 2 >>> A.consume D.sum :: A.Transform Int Int
     assoc ((a,b),c) = (a,(b,c))
     assocsum (Left (Left x)) = Left x
     assocsum (Left (Right y)) = Right (Left y)

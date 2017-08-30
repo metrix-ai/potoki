@@ -182,21 +182,15 @@ left inputUpdate (Fetch inputOrRightSignal) =
         Left input -> signalElement input
         Right right -> modifyIORef rightStateRef (B.snoc right) >> loop
     outputOrRightFetch rightStateRef (Fetch outputSignal) =
-      Fetch $ \signalEnd signalElement ->
-      let
-        outputSignalEnd =
-          do
-            rightState <- readIORef rightStateRef
-            case B.uncons rightState of
-              Just (right, tailRightState) -> do
-                writeIORef rightStateRef tailRightState
-                signalElement (Right right)
-              Nothing ->
-                signalEnd
-        outputSignalElement =
-          signalElement . Left
-        in
-          outputSignal outputSignalEnd outputSignalElement
+      Fetch $ \outputOrRightSignalEnd outputOrRightSignalElement ->
+      do
+        rightState <- readIORef rightStateRef
+        case B.uncons rightState of
+          Just (right, tailRightState) -> do
+            writeIORef rightStateRef tailRightState
+            outputOrRightSignalElement (Right right)
+          Nothing -> do
+            outputSignal outputOrRightSignalEnd (outputOrRightSignalElement . Left)
 
 mapFilter :: (input -> Maybe output) -> Fetch input -> Fetch output
 mapFilter mapping (Fetch fetch) =

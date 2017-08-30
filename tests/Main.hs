@@ -26,6 +26,8 @@ main =
     C.produceAndConsume (E.list [1,5,2,3]) (D.transform (A.mapFilter (\x -> if x < 5 then Just x else Nothing)) D.list)
     ,
     transformArrowLaws
+    ,
+    transformArrowChoiceLaws
   ]
 
 transformArrowLaws =
@@ -64,6 +66,36 @@ transformArrowLaws =
     g = (*3) :: Int -> Int
     assoc ((a,b),c) = (a,(b,c))
 
+transformArrowChoiceLaws =
+  testGroup "Transform ArrowChoice laws"
+  [
+    transformProperty "left (arr f) = arr (left f)"
+      (left (arr f) :: A.Transform (Either Int Char) (Either Int Char))
+      (arr (left f))
+    ,
+    transformProperty "left (f >>> g) = left f >>> left g"
+      (left (arr f >>> arr g) :: A.Transform (Either Int Char) (Either Int Char))
+      (left (arr f) >>> left (arr g))
+    ,
+    transformProperty "f >>> arr Left = arr Left >>> left f"
+      (arr f >>> arr Left :: A.Transform Int (Either Int Char))
+      (arr Left >>> left (arr f))
+    ,
+    transformProperty "left f >>> arr (id +++ g) = arr (id +++ g) >>> left f"
+      (left (arr f) >>> arr (id +++ g))
+      (arr (id +++ g) >>> left (arr f))
+    ,
+    transformProperty "left (left f) >>> arr assocsum = arr assocsum >>> left f"
+      (left (left (arr f)) >>> arr assocsum :: A.Transform (Either (Either Int Char) Double) (Either Int (Either Char Double)))
+      (arr assocsum >>> left (arr f))
+  ]
+  where
+    f = (+24) :: Int -> Int
+    g = (*3) :: Int -> Int
+    assocsum (Left (Left x)) = Left x
+    assocsum (Left (Right y)) = Right (Left y)
+    assocsum (Right z) = Right (Right z)
+
 transformProperty :: 
   (Arbitrary input, Show input, Eq output, Show output) => 
   String -> A.Transform input output -> A.Transform input output -> TestTree
@@ -75,3 +107,5 @@ transformProperty name leftTransform rightTransform =
       where
         transform transform =
           unsafePerformIO (C.produceAndConsume (E.list list) (D.transform transform D.list))
+
+

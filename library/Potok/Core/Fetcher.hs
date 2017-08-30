@@ -14,23 +14,29 @@ newtype Fetcher element =
 
 instance Functor Fetcher where
   fmap mapping (Fetcher fetcherFn) =
-    Fetcher (\sendEnd sendElement -> fetcherFn sendEnd (sendElement . mapping))
+    Fetcher (\signalEnd signalElement -> fetcherFn signalEnd (signalElement . mapping))
 
 instance Applicative Fetcher where
   pure x =
-    Fetcher (\sendEnd sendElement -> sendElement x)
+    Fetcher (\signalEnd signalElement -> signalElement x)
   (<*>) (Fetcher leftFn) (Fetcher rightFn) =
-    Fetcher (\sendEnd sendElement -> leftFn sendEnd (\leftElement -> rightFn sendEnd (\rightElement -> sendElement (leftElement rightElement))))
+    Fetcher (\signalEnd signalElement -> leftFn signalEnd (\leftElement -> rightFn signalEnd (\rightElement -> signalElement (leftElement rightElement))))
 
 instance Monad Fetcher where
   return =
     pure
   (>>=) (Fetcher leftFn) rightK =
     Fetcher
-    (\sendEnd onRightElement ->
-      leftFn sendEnd
+    (\signalEnd onRightElement ->
+      leftFn signalEnd
       (\leftElement -> case rightK leftElement of
-        Fetcher rightFn -> rightFn sendEnd onRightElement))
+        Fetcher rightFn -> rightFn signalEnd onRightElement))
+
+instance Alternative Fetcher where
+  empty =
+    Fetcher (\signalEnd signalElement -> signalEnd)
+  (<|>) (Fetcher leftSignal) (Fetcher rightSignal) =
+    Fetcher (\signalEnd signalElement -> leftSignal (rightSignal signalEnd signalElement) signalElement)
 
 mapWithParseResult :: forall input parsed. (input -> I.IResult input parsed) -> Fetcher input -> IO (Fetcher (Either Text parsed))
 mapWithParseResult inputToResult (Fetcher fetchInput) =
@@ -90,10 +96,25 @@ take amount (Fetcher fetchInput) =
   fetcher <$> newIORef amount
   where
     fetcher countRef =
-      Fetcher $ \sendEnd sendElement -> do
+      Fetcher $ \signalEnd signalElement -> do
         count <- readIORef countRef
         if count > 0
           then do
             writeIORef countRef (pred count)
-            fetchInput sendEnd sendElement
-          else sendEnd
+            fetchInput signalEnd signalElement
+          else signalEnd
+
+sink :: (Fetcher input -> IO output) -> Fetcher input -> IO (Fetcher output)
+sink sink (Fetcher signal) =
+  fetcher <$> newIORef False
+  where
+    fetcher finishedRef =
+      Fetcher $ \signalEnd signalOutput -> do
+        finished <- readIORef finishedRef
+        if finished
+          then signalEnd
+          else do
+            output <-
+              sink $ Fetcher $ \sinkSignalEnd sinkSignalInput ->
+              signal (writeIORef finishedRef True >> sinkSignalEnd) sinkSignalInput
+            signalOutput output

@@ -163,3 +163,16 @@ mapFilter mapping (Fetcher fetch) =
   case mapping input of
     Just output -> signalOutput output
     Nothing -> loop
+
+list :: [input] -> IO (Fetcher input)
+list list =
+  fetcher <$> newIORef list
+  where
+    fetcher unsentListRef =
+      Fetcher $ \signalEnd signalElement -> do
+        list <- readIORef unsentListRef
+        case list of
+          head : tail -> do
+            writeIORef unsentListRef tail
+            signalElement head
+          _ -> signalEnd

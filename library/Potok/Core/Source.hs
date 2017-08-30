@@ -88,3 +88,7 @@ fileBytes path =
   where
     chunkSize =
       shiftL 2 12
+
+list :: [input] -> Source input
+list list =
+  Source (\fetch -> A.list list >>= fetch)

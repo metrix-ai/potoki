@@ -151,21 +151,23 @@ handleBytes handle chunkSize =
 first :: (Fetch input -> IO (Fetch output)) -> (Fetch (input, right) -> IO (Fetch (output, right)))
 first inputUpdate (Fetch inputAndRightSignal) =
   do
-    rightStateRef <- newIORef Nothing
+    rightStateRef <- newIORef mempty
     outputFetch <- inputUpdate (inputFetch rightStateRef)
     return (outputAndRightFetch rightStateRef outputFetch)
   where
     inputFetch rightStateRef =
       Fetch $ \inputSignalEnd inputSignalElement ->
       inputAndRightSignal inputSignalEnd $ \(input, right) -> do
-        writeIORef rightStateRef (Just right)
+        modifyIORef rightStateRef (B.snoc right)
         inputSignalElement input
     outputAndRightFetch rightStateRef (Fetch outputSignal) =
       Fetch $ \outputAndRightSignalEnd outputAndRightSignalElement ->
       outputSignal outputAndRightSignalEnd $ \output -> do
         rightState <- readIORef rightStateRef
-        case rightState of
-          Just right -> outputAndRightSignalElement (output, right)
+        case B.uncons rightState of
+          Just (right, rightStateTail) -> do
+            writeIORef rightStateRef rightStateTail
+            outputAndRightSignalElement (output, right)
           Nothing -> outputAndRightSignalEnd
 
 left :: (Fetch input -> IO (Fetch output)) -> (Fetch (Either input right) -> IO (Fetch (Either output right)))

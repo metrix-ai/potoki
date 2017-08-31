@@ -63,6 +63,14 @@ sum =
     build send acc =
       send (pure acc) (\x -> build send (x + acc))
 
+{-# INLINE count #-}
+count :: Consume a Int
+count =
+  Consume $ \(A.Fetch send) -> build send 0
+  where
+    build send acc =
+      send (pure acc) (const (build send (succ acc)))
+
 {-|
 Overwrite a file.
 

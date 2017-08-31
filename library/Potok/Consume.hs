@@ -2,6 +2,7 @@ module Potok.Consume
 (
   B.Consume,
   transform,
+  B.count,
   B.head,
   B.list,
   B.reverseList,

@@ -50,6 +50,20 @@ main =
       result <- C.produceAndConsume produce D.count
       assertEqual "" 780 result
     ,
+    testCase "Transform order" $ do
+      let
+        list = [Left 1, Right 'z', Left 2, Right 'a', Left 1, Right 'b', Left 0, Right 'x', Left 4, Left 3]
+        transform = left (A.consume (D.transform (A.take 2) D.sum))
+      result <- C.produceAndConsume (E.list list) (D.transform transform D.list)
+      assertEqual "" [Right 'z', Left 3, Right 'a', Right 'b', Left 1, Right 'x', Left 7] result
+    ,
+    testCase "Transform interrupted order" $ do
+      let
+        list = [Left 1, Left 2, Right 'a']
+        transform = left (A.consume (D.transform (A.take 3) D.sum))
+      result <- C.produceAndConsume (E.list list) (D.transform transform D.list)
+      assertEqual "" [Left 3, Right 'a'] result
+    ,
     transformArrowLaws
   ]
 
@@ -104,12 +118,9 @@ transformArrowLaws =
       (left (left transform1) >>> arr assocsum :: A.Transform (Either (Either Int Char) Double) (Either Int (Either Char Double)))
       (arr assocsum >>> left transform1)
     ,
-    testCase "Order" $ do
-      let
-        list = [Left 1, Right 'z', Left 2, Right 'a', Left 1, Right 'b', Left 0, Right 'x', Left 4, Left 3]
-        transform = left transform2
-      result <- C.produceAndConsume (E.list list) (D.transform transform D.list)
-      assertEqual "" [Right 'z', Left 3, Right 'a', Right 'b', Left 1, Right 'x', Left 7] result
+    transformProperty "left (left (arr f)) >>> arr assocsum = arr assocsum >>> left (arr f)"
+      (left (left (arr f)) >>> arr assocsum :: A.Transform (Either (Either Int Char) Double) (Either Int (Either Char Double)))
+      (arr assocsum >>> left (arr f))
   ]
   where
     f = (+24) :: Int -> Int

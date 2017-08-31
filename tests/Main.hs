@@ -11,6 +11,8 @@ import qualified Potok.IO as C
 import qualified Potok.Consume as D
 import qualified Potok.Transform as A
 import qualified Potok.Produce as E
+import qualified Data.Attoparsec.ByteString.Char8 as B
+import qualified Data.ByteString as F
 
 
 main =
@@ -24,6 +26,20 @@ main =
     testCase "mapFilter" $
     assertEqual "" [1,2,3] =<< 
     C.produceAndConsume (E.list [1,5,2,3]) (D.transform (A.mapFilter (\x -> if x < 5 then Just x else Nothing)) D.list)
+    ,
+    testCase "File reading" $ do
+      let produce =
+            E.transform (A.mapFilter (either (const Nothing) Just)) $
+            E.fileBytes "samples/1"
+      result <- C.produceAndConsume produce (fmap F.length D.concat)
+      assertEqual "" 3480 result
+    ,
+    testCase "Sample 1 parsing" $ do
+      let parser = B.sepBy B.double (B.char ',')
+          transform = A.mapFilter (either (const Nothing) Just) >>> A.parseBytes parser
+          produce = E.transform transform (E.fileBytes "samples/1")
+      result <- C.produceAndConsume produce D.count
+      assertEqual "" 780 result
     ,
     transformArrowLaws
   ]

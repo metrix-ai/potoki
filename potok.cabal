@@ -105,6 +105,7 @@ test-suite tests
   build-depends:
     -- 
     potok,
+    attoparsec,
     -- testing:
     tasty ==0.11.*,
     tasty-quickcheck ==0.8.*,

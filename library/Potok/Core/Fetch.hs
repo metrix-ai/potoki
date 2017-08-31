@@ -149,26 +149,26 @@ handleBytes handle chunkSize =
       _ -> emit element
 
 first :: (Fetch input -> IO (Fetch output)) -> (Fetch (input, right) -> IO (Fetch (output, right)))
-first inputUpdate (Fetch inputAndRightSignal) =
+first inputUpdate (Fetch fetchInputAndRight) =
   do
     rightStateRef <- newIORef mempty
     outputFetch <- inputUpdate (inputFetch rightStateRef)
     return (outputAndRightFetch rightStateRef outputFetch)
   where
     inputFetch rightStateRef =
-      Fetch $ \inputStop inputEmit ->
-      inputAndRightSignal inputStop $ \(input, right) -> do
+      Fetch $ \stop emit ->
+      fetchInputAndRight stop $ \(input, right) -> do
         modifyIORef rightStateRef (B.snoc right)
-        inputEmit input
-    outputAndRightFetch rightStateRef (Fetch outputSignal) =
-      Fetch $ \outputAndRightStop outputAndRightEmit ->
-      outputSignal outputAndRightStop $ \output -> do
+        emit input
+    outputAndRightFetch rightStateRef (Fetch fetchOutput) =
+      Fetch $ \stop emit ->
+      fetchOutput stop $ \output -> do
         rightState <- readIORef rightStateRef
         case B.uncons rightState of
           Just (right, rightStateTail) -> do
             writeIORef rightStateRef rightStateTail
-            outputAndRightEmit (output, right)
-          Nothing -> outputAndRightStop
+            emit (output, right)
+          Nothing -> stop
 
 left :: (Fetch input -> IO (Fetch output)) -> (Fetch (Either input right) -> IO (Fetch (Either output right)))
 left inputUpdate (Fetch inputOrRightSignal) =
@@ -183,7 +183,7 @@ left inputUpdate (Fetch inputOrRightSignal) =
       inputOrRightSignal stop $ \case
         Left input -> emit input
         Right right -> modifyIORef bufferRef (B.snoc (Right right)) >> loop
-    outputOrRightFetch bufferRef (Fetch outputSignal) =
+    outputOrRightFetch bufferRef (Fetch fetchOutput) =
       Fetch $ \stop emit ->
         let
           outputStop =
@@ -204,7 +204,7 @@ left inputUpdate (Fetch inputOrRightSignal) =
                   emit outputOrRight
                 Nothing -> emit (Left output)
           in
-            outputSignal outputStop outputEmit
+            fetchOutput outputStop outputEmit
 
 mapFilter :: (input -> Maybe output) -> Fetch input -> Fetch output
 mapFilter mapping (Fetch fetch) =

@@ -56,7 +56,7 @@ reverseList =
       send (pure acc) (\element -> build send (element : acc))
 
 {-# INLINE sum #-}
-sum :: Num a => Consume a a
+sum :: Num num => Consume num num
 sum =
   Consume $ \(A.Fetch send) -> build send 0
   where
@@ -64,7 +64,7 @@ sum =
       send (pure acc) (\x -> build send (x + acc))
 
 {-# INLINE count #-}
-count :: Consume a Int
+count :: Consume input Int
 count =
   Consume $ \(A.Fetch send) -> build send 0
   where

@@ -44,11 +44,11 @@ main =
       assertEqual "" 3480 result
     ,
     testCase "Sample 1 parsing" $ do
-      let parser = B.sepBy B.double (B.char ',')
+      let parser = B.double <* B.char ','
           transform = A.mapFilter (either (const Nothing) Just) >>> A.parseBytes parser
           produce = E.transform transform (E.fileBytes "samples/1")
       result <- C.produceAndConsume produce D.count
-      assertEqual "" 780 result
+      assertEqual "" 4350 result
     ,
     testCase "Transform order" $ do
       let

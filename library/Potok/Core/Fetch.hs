@@ -65,7 +65,7 @@ mapWithParseResult inputToResult (Fetch fetchInput) =
     return (Fetch (fetchParsed unconsumedStateRef))
   where
     fetchParsed :: IORef (Maybe input) -> IO x -> (Either Text parsed -> IO x) -> IO x
-    fetchParsed unconsumedStateRef onParsedEnd onParsedElement =
+    fetchParsed unconsumedStateRef stop emit =
       do
         unconsumedState <- readIORef unconsumedStateRef
         case unconsumedState of
@@ -79,11 +79,11 @@ mapWithParseResult inputToResult (Fetch fetchInput) =
             I.Done unconsumed parsed ->
               do
                 writeIORef unconsumedStateRef (Just unconsumed)
-                onParsedElement (Right parsed)
+                emit (Right parsed)
             I.Fail unconsumed contexts message ->
               do
                 writeIORef unconsumedStateRef (Just unconsumed)
-                onParsedElement (Left (fromString (intercalate " > " contexts <> ": " <> message)))
+                emit (Left (fromString (intercalate " > " contexts <> ": " <> message)))
         consume inputToResult =
           fetchInput onParsedEnd (matchResult . inputToResult)
 

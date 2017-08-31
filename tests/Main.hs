@@ -78,12 +78,19 @@ transformArrowLaws =
     transformProperty "left (left f) >>> arr assocsum = arr assocsum >>> left f"
       (left (left transform1) >>> arr assocsum :: A.Transform (Either (Either Int Char) Double) (Either Int (Either Char Double)))
       (arr assocsum >>> left transform1)
+    ,
+    testCase "Order" $ do
+      let
+        list = [Left 1, Right 'z', Left 2, Right 'a', Left 1, Right 'b', Left 0, Right 'x', Left 4, Left 3]
+        transform = left transform2
+      result <- C.produceAndConsume (E.list list) (D.transform transform D.list)
+      assertEqual "" [Right 'z', Left 3, Right 'a', Right 'b', Left 1, Right 'x', Left 7] result
   ]
   where
     f = (+24) :: Int -> Int
     g = (*3) :: Int -> Int
-    transform1 = A.take 3 >>> A.consume D.sum :: A.Transform Int Int
-    transform2 = A.take 2 >>> A.consume D.sum :: A.Transform Int Int
+    transform1 = A.consume (D.transform (A.take 3) D.sum) :: A.Transform Int Int
+    transform2 = A.consume (D.transform (A.take 2) D.sum) :: A.Transform Int Int
     assoc ((a,b),c) = (a,(b,c))
     assocsum (Left (Left x)) = Left x
     assocsum (Left (Right y)) = Right (Left y)

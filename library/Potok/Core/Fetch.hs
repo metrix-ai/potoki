@@ -58,7 +58,7 @@ list unsentListRef =
         emit head
       _ -> stop
 
-mapWithParseResult :: forall input parsed. (input -> I.IResult input parsed) -> Fetch input -> IO (Fetch (Either Text parsed))
+mapWithParseResult :: forall input parsed. (Monoid input) => (input -> I.IResult input parsed) -> Fetch input -> IO (Fetch (Either Text parsed))
 mapWithParseResult inputToResult (Fetch fetchInput) =
   do
     unconsumedStateRef <- newIORef Nothing
@@ -69,13 +69,15 @@ mapWithParseResult inputToResult (Fetch fetchInput) =
       do
         unconsumedState <- readIORef unconsumedStateRef
         case unconsumedState of
-          Just unconsumed -> matchResult (inputToResult unconsumed)
-          Nothing -> consume inputToResult
+          Just unconsumed -> do
+            writeIORef unconsumedStateRef Nothing
+            matchResult False (inputToResult unconsumed)
+          Nothing -> consume False inputToResult
       where
-        matchResult =
+        matchResult consumed =
           \case
             I.Partial inputToResult ->
-              consume inputToResult
+              consume consumed inputToResult
             I.Done unconsumed parsed ->
               do
                 writeIORef unconsumedStateRef (Just unconsumed)
@@ -84,8 +86,12 @@ mapWithParseResult inputToResult (Fetch fetchInput) =
               do
                 writeIORef unconsumedStateRef (Just unconsumed)
                 emit (Left (fromString (intercalate " > " contexts <> ": " <> message)))
-        consume inputToResult =
-          fetchInput onParsedEnd (matchResult . inputToResult)
+        consume consumed inputToResult =
+          fetchInput
+            (if consumed
+              then matchResult True (inputToResult mempty)
+              else stop)
+            (matchResult True . inputToResult)
 
 {-|
 Lift an Attoparsec ByteString parser.

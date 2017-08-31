@@ -27,6 +27,14 @@ main =
     assertEqual "" [1,2,3] =<< 
     C.produceAndConsume (E.list [1,5,2,3]) (D.transform (A.mapFilter (\x -> if x < 5 then Just x else Nothing)) D.list)
     ,
+    testCase "transform,consume,take" $ do
+      let
+        transform = A.consume (D.transform (A.take 3) D.list)
+        consume = D.transform transform D.list
+        produceAndConsume list = C.produceAndConsume (E.list list) (consume)
+      assertEqual "" [[1,2,3], [4,5,6], [7,8]] =<< produceAndConsume [1,2,3,4,5,6,7,8]
+      assertEqual "" [[1,2,3], [4,5,6], [7,8,9]] =<< produceAndConsume [1,2,3,4,5,6,7,8,9]
+    ,
     testCase "File reading" $ do
       let produce =
             E.transform (A.mapFilter (either (const Nothing) Just)) $

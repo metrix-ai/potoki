@@ -50,6 +50,13 @@ main =
       result <- C.produceAndConsume produce D.count
       assertEqual "" 4350 result
     ,
+    testCase "Sample 1 greedy parsing" $ do
+      let parser = B.sepBy B.double (B.char ',')
+          transform = A.mapFilter (either (const Nothing) Just) >>> A.parseBytes parser
+          produce = E.transform transform (E.fileBytes "samples/1")
+      result <- C.produceAndConsume produce D.list
+      assertEqual "" [Right 4350] (fmap (fmap length) result)
+    ,
     testCase "Transform order" $ do
       let
         list = [Left 1, Right 'z', Left 2, Right 'a', Left 1, Right 'b', Left 0, Right 'x', Left 4, Left 3]

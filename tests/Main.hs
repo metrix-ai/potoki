@@ -41,7 +41,7 @@ main =
             E.transform (A.mapFilter (either (const Nothing) Just)) $
             E.fileBytes "samples/1"
       result <- C.produceAndConsume produce (fmap F.length D.concat)
-      assertEqual "" 3480 result
+      assertEqual "" 17400 result
     ,
     testCase "Sample 1 parsing" $ do
       let parser = B.double <* B.char ','

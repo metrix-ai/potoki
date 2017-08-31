@@ -11,6 +11,8 @@ import qualified Potok.IO as C
 import qualified Potok.Consume as D
 import qualified Potok.Transform as A
 import qualified Potok.Produce as E
+import qualified Data.Attoparsec.ByteString.Char8 as B
+import qualified Data.ByteString as F
 
 
 main =
@@ -25,9 +27,44 @@ main =
     assertEqual "" [1,2,3] =<< 
     C.produceAndConsume (E.list [1,5,2,3]) (D.transform (A.mapFilter (\x -> if x < 5 then Just x else Nothing)) D.list)
     ,
-    transformArrowLaws
+    testCase "transform,consume,take" $ do
+      let
+        transform = A.consume (D.transform (A.take 3) D.list)
+        consume = D.transform transform D.list
+        produceAndConsume list = C.produceAndConsume (E.list list) (consume)
+      assertEqual "" [[1,2,3], [4,5,6], [7,8]] =<< produceAndConsume [1,2,3,4,5,6,7,8]
+      assertEqual "" [[1,2,3], [4,5,6], [7,8,9]] =<< produceAndConsume [1,2,3,4,5,6,7,8,9]
+      assertEqual "" [] =<< produceAndConsume ([] :: [Int])
     ,
-    transformArrowChoiceLaws
+    testCase "File reading" $ do
+      let produce =
+            E.transform (A.mapFilter (either (const Nothing) Just)) $
+            E.fileBytes "samples/1"
+      result <- C.produceAndConsume produce (fmap F.length D.concat)
+      assertEqual "" 3480 result
+    ,
+    testCase "Sample 1 parsing" $ do
+      let parser = B.double <* B.char ','
+          transform = A.mapFilter (either (const Nothing) Just) >>> A.parseBytes parser
+          produce = E.transform transform (E.fileBytes "samples/1")
+      result <- C.produceAndConsume produce D.count
+      assertEqual "" 4350 result
+    ,
+    testCase "Transform order" $ do
+      let
+        list = [Left 1, Right 'z', Left 2, Right 'a', Left 1, Right 'b', Left 0, Right 'x', Left 4, Left 3]
+        transform = left (A.consume (D.transform (A.take 2) D.sum))
+      result <- C.produceAndConsume (E.list list) (D.transform transform D.list)
+      assertEqual "" [Right 'z', Left 3, Right 'a', Right 'b', Left 1, Right 'x', Left 7] result
+    ,
+    testCase "Transform interrupted order" $ do
+      let
+        list = [Left 1, Left 2, Right 'a']
+        transform = left (A.consume (D.transform (A.take 3) D.sum))
+      result <- C.produceAndConsume (E.list list) (D.transform transform D.list)
+      assertEqual "" [Left 3, Right 'a'] result
+    ,
+    transformArrowLaws
   ]
 
 transformArrowLaws =
@@ -46,52 +83,51 @@ transformArrowLaws =
       (arr (first f))
     ,
     transformProperty "first (f >>> g) = first f >>> first g"
-      (first (arr f >>> arr g) :: A.Transform (Int, Char) (Int, Char))
-      (first (arr f) >>> first (arr g))
+      (first (transform1 >>> transform2) :: A.Transform (Int, Char) (Int, Char))
+      (first (transform1) >>> first (transform2))
     ,
     transformProperty "first f >>> arr fst = arr fst >>> f"
-      (first (arr f) >>> arr fst :: A.Transform (Int, Char) Int)
-      (arr fst >>> arr f)
+      (first transform1 >>> arr fst :: A.Transform (Int, Char) Int)
+      (arr fst >>> transform1)
     ,
     transformProperty "first f >>> arr (id *** g) = arr (id *** g) >>> first f"
-      (first (arr f) >>> arr (id *** g))
-      (arr (id *** g) >>> first (arr f))
+      (first transform1 >>> arr (id *** g))
+      (arr (id *** g) >>> first transform1)
     ,
     transformProperty "first (first f) >>> arr assoc = arr assoc >>> first f"
-      (first (first (arr f)) >>> arr assoc :: A.Transform ((Int, Char), Double) (Int, (Char, Double)))
-      (arr assoc >>> first (arr f))
-  ]
-  where
-    f = (+24) :: Int -> Int
-    g = (*3) :: Int -> Int
-    assoc ((a,b),c) = (a,(b,c))
-
-transformArrowChoiceLaws =
-  testGroup "Transform ArrowChoice laws"
-  [
+      (first (first transform1) >>> arr assoc :: A.Transform ((Int, Char), Double) (Int, (Char, Double)))
+      (arr assoc >>> first transform1)
+    ,
     transformProperty "left (arr f) = arr (left f)"
       (left (arr f) :: A.Transform (Either Int Char) (Either Int Char))
       (arr (left f))
     ,
     transformProperty "left (f >>> g) = left f >>> left g"
-      (left (arr f >>> arr g) :: A.Transform (Either Int Char) (Either Int Char))
-      (left (arr f) >>> left (arr g))
+      (left (transform1 >>> transform2) :: A.Transform (Either Int Char) (Either Int Char))
+      (left (transform1) >>> left (transform2))
     ,
     transformProperty "f >>> arr Left = arr Left >>> left f"
-      (arr f >>> arr Left :: A.Transform Int (Either Int Char))
-      (arr Left >>> left (arr f))
+      (transform1 >>> arr Left :: A.Transform Int (Either Int Char))
+      (arr Left >>> left transform1)
     ,
     transformProperty "left f >>> arr (id +++ g) = arr (id +++ g) >>> left f"
-      (left (arr f) >>> arr (id +++ g))
-      (arr (id +++ g) >>> left (arr f))
+      (left transform1 >>> arr (id +++ g))
+      (arr (id +++ g) >>> left transform1)
     ,
     transformProperty "left (left f) >>> arr assocsum = arr assocsum >>> left f"
+      (left (left transform1) >>> arr assocsum :: A.Transform (Either (Either Int Char) Double) (Either Int (Either Char Double)))
+      (arr assocsum >>> left transform1)
+    ,
+    transformProperty "left (left (arr f)) >>> arr assocsum = arr assocsum >>> left (arr f)"
       (left (left (arr f)) >>> arr assocsum :: A.Transform (Either (Either Int Char) Double) (Either Int (Either Char Double)))
       (arr assocsum >>> left (arr f))
   ]
   where
     f = (+24) :: Int -> Int
     g = (*3) :: Int -> Int
+    transform1 = A.consume (D.transform (A.take 3) D.sum) :: A.Transform Int Int
+    transform2 = A.consume (D.transform (A.take 2) D.sum) :: A.Transform Int Int
+    assoc ((a,b),c) = (a,(b,c))
     assocsum (Left (Left x)) = Left x
     assocsum (Left (Right y)) = Right (Left y)
     assocsum (Right z) = Right (Right z)

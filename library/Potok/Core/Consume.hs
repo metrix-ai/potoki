@@ -35,7 +35,7 @@ head :: Consume input (Maybe input)
 head =
   Consume (\(A.Fetch send) -> send (pure Nothing) (pure . Just))
 
-{-# INLINABLE list #-}
+{-# INLINE list #-}
 list :: Consume input [input]
 list =
   Consume $ \(A.Fetch send) -> build send id
@@ -47,13 +47,37 @@ list =
 A faster alternative to "list",
 which however produces the list in the reverse order.
 -}
-{-# INLINABLE reverseList #-}
+{-# INLINE reverseList #-}
 reverseList :: Consume input [input]
 reverseList =
   Consume $ \(A.Fetch send) -> build send []
   where
     build send acc =
       send (pure acc) (\element -> build send (element : acc))
+
+{-# INLINE sum #-}
+sum :: Num num => Consume num num
+sum =
+  Consume $ \(A.Fetch send) -> build send 0
+  where
+    build send acc =
+      send (pure acc) (\x -> build send (x + acc))
+
+{-# INLINE count #-}
+count :: Consume input Int
+count =
+  Consume $ \(A.Fetch send) -> build send 0
+  where
+    build send acc =
+      send (pure acc) (const (build send (succ acc)))
+
+{-# INLINE concat #-}
+concat :: Monoid monoid => Consume monoid monoid
+concat =
+  Consume $ \(A.Fetch send) -> build send mempty
+  where
+    build send acc =
+      send (pure acc) (\x -> build send (mappend acc x))
 
 {-|
 Overwrite a file.

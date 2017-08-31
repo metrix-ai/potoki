@@ -16,29 +16,29 @@ newtype Fetch element =
 
 instance Functor Fetch where
   fmap mapping (Fetch fetcherFn) =
-    Fetch (\signalEnd signalElement -> fetcherFn signalEnd (signalElement . mapping))
+    Fetch (\stop emit -> fetcherFn stop (emit . mapping))
 
 instance Applicative Fetch where
   pure x =
-    Fetch (\signalEnd signalElement -> signalElement x)
+    Fetch (\stop emit -> emit x)
   (<*>) (Fetch leftFn) (Fetch rightFn) =
-    Fetch (\signalEnd signalElement -> leftFn signalEnd (\leftElement -> rightFn signalEnd (\rightElement -> signalElement (leftElement rightElement))))
+    Fetch (\stop emit -> leftFn stop (\leftElement -> rightFn stop (\rightElement -> emit (leftElement rightElement))))
 
 instance Monad Fetch where
   return =
     pure
   (>>=) (Fetch leftFn) rightK =
     Fetch
-    (\signalEnd onRightElement ->
-      leftFn signalEnd
+    (\stop emit ->
+      leftFn stop
       (\leftElement -> case rightK leftElement of
-        Fetch rightFn -> rightFn signalEnd onRightElement))
+        Fetch rightFn -> rightFn stop emit))
 
 instance Alternative Fetch where
   empty =
-    Fetch (\signalEnd signalElement -> signalEnd)
+    Fetch (\stop emit -> stop)
   (<|>) (Fetch leftSignal) (Fetch rightSignal) =
-    Fetch (\signalEnd signalElement -> leftSignal (rightSignal signalEnd signalElement) signalElement)
+    Fetch (\stop emit -> leftSignal (rightSignal stop emit) emit)
 
 asMaybeIO :: Fetch element -> IO (Maybe element)
 asMaybeIO (Fetch signal) =
@@ -46,46 +46,52 @@ asMaybeIO (Fetch signal) =
 
 maybeIO :: IO (Maybe element) -> Fetch element
 maybeIO maybeIO =
-  Fetch (\signalEnd signalElement -> maybeIO >>= maybe signalEnd signalElement)
+  Fetch (\stop emit -> maybeIO >>= maybe stop emit)
 
 list :: IORef [input] -> Fetch input
 list unsentListRef =
-  Fetch $ \signalEnd signalElement -> do
+  Fetch $ \stop emit -> do
     list <- readIORef unsentListRef
     case list of
       head : tail -> do
         writeIORef unsentListRef tail
-        signalElement head
-      _ -> signalEnd
+        emit head
+      _ -> stop
 
-mapWithParseResult :: forall input parsed. (input -> I.IResult input parsed) -> Fetch input -> IO (Fetch (Either Text parsed))
+mapWithParseResult :: forall input parsed. (Monoid input) => (input -> I.IResult input parsed) -> Fetch input -> IO (Fetch (Either Text parsed))
 mapWithParseResult inputToResult (Fetch fetchInput) =
   do
     unconsumedStateRef <- newIORef Nothing
     return (Fetch (fetchParsed unconsumedStateRef))
   where
     fetchParsed :: IORef (Maybe input) -> IO x -> (Either Text parsed -> IO x) -> IO x
-    fetchParsed unconsumedStateRef onParsedEnd onParsedElement =
+    fetchParsed unconsumedStateRef stop emit =
       do
         unconsumedState <- readIORef unconsumedStateRef
         case unconsumedState of
-          Just unconsumed -> matchResult (inputToResult unconsumed)
-          Nothing -> consume inputToResult
+          Just unconsumed -> do
+            writeIORef unconsumedStateRef Nothing
+            matchResult False (inputToResult unconsumed)
+          Nothing -> consume False inputToResult
       where
-        matchResult =
+        matchResult consumed =
           \case
             I.Partial inputToResult ->
-              consume inputToResult
+              consume consumed inputToResult
             I.Done unconsumed parsed ->
               do
                 writeIORef unconsumedStateRef (Just unconsumed)
-                onParsedElement (Right parsed)
+                emit (Right parsed)
             I.Fail unconsumed contexts message ->
               do
                 writeIORef unconsumedStateRef (Just unconsumed)
-                onParsedElement (Left (fromString (intercalate " > " contexts <> ": " <> message)))
-        consume inputToResult =
-          fetchInput onParsedEnd (matchResult . inputToResult)
+                emit (Left (fromString (intercalate " > " contexts <> ": " <> message)))
+        consume consumed inputToResult =
+          fetchInput
+            (if consumed
+              then matchResult True (inputToResult mempty)
+              else stop)
+            (matchResult True . inputToResult)
 
 {-|
 Lift an Attoparsec ByteString parser.
@@ -116,87 +122,105 @@ take amount (Fetch fetchInput) =
   fetcher <$> newIORef amount
   where
     fetcher countRef =
-      Fetch $ \signalEnd signalElement -> do
+      Fetch $ \stop emit -> do
         count <- readIORef countRef
         if count > 0
           then do
             writeIORef countRef (pred count)
-            fetchInput signalEnd signalElement
-          else signalEnd
+            fetchInput stop emit
+          else stop
 
-consume :: (Fetch input -> IO output) -> Fetch input -> IO (Fetch output)
-consume consume (Fetch signal) =
-  fetcher <$> newIORef False
-  where
-    fetcher finishedRef =
-      Fetch $ \signalEnd signalOutput -> do
-        finished <- readIORef finishedRef
-        if finished
-          then signalEnd
-          else do
-            output <-
-              consume $ Fetch $ \consumeSignalEnd consumeSignalInput ->
-              signal (writeIORef finishedRef True >> consumeSignalEnd) consumeSignalInput
-            signalOutput output
+consume :: (Fetch input -> IO output) -> Fetch input -> Fetch output
+consume consume (Fetch fetchInput) =
+  Fetch $ \stop emit -> do
+    peeked <- fetchInput (pure Nothing) (pure . Just)
+    case peeked of
+      Nothing -> stop
+      Just peeked -> do
+        firstRef <- newIORef (Just peeked)
+        output <-
+          consume $ Fetch $ \consumeStop consumeEmit -> do
+            firstMaybe <- readIORef firstRef
+            case firstMaybe of
+              Just first -> do
+                writeIORef firstRef Nothing
+                consumeEmit first
+              Nothing ->
+                fetchInput consumeStop consumeEmit
+        emit output
 
 handleBytes :: Handle -> Int -> Fetch (Either IOException ByteString)
 handleBytes handle chunkSize =
-  Fetch $ \signalEnd signalElement ->
+  Fetch $ \stop emit ->
   do
     element <- try (A.hGetSome handle chunkSize)
     case element of
-      Right "" -> signalEnd
-      _ -> signalElement element
+      Right "" -> stop
+      _ -> emit element
 
 first :: (Fetch input -> IO (Fetch output)) -> (Fetch (input, right) -> IO (Fetch (output, right)))
-first inputUpdate (Fetch inputAndRightSignal) =
+first inputUpdate (Fetch fetchInputAndRight) =
   do
-    rightStateRef <- newIORef Nothing
+    rightStateRef <- newIORef mempty
     outputFetch <- inputUpdate (inputFetch rightStateRef)
     return (outputAndRightFetch rightStateRef outputFetch)
   where
     inputFetch rightStateRef =
-      Fetch $ \inputSignalEnd inputSignalElement ->
-      inputAndRightSignal inputSignalEnd $ \(input, right) -> do
-        writeIORef rightStateRef (Just right)
-        inputSignalElement input
-    outputAndRightFetch rightStateRef (Fetch outputSignal) =
-      Fetch $ \outputAndRightSignalEnd outputAndRightSignalElement ->
-      outputSignal outputAndRightSignalEnd $ \output -> do
+      Fetch $ \stop emit ->
+      fetchInputAndRight stop $ \(input, right) -> do
+        modifyIORef rightStateRef (B.snoc right)
+        emit input
+    outputAndRightFetch rightStateRef (Fetch fetchOutput) =
+      Fetch $ \stop emit ->
+      fetchOutput stop $ \output -> do
         rightState <- readIORef rightStateRef
-        case rightState of
-          Just right -> outputAndRightSignalElement (output, right)
-          Nothing -> outputAndRightSignalEnd
+        case B.uncons rightState of
+          Just (right, rightStateTail) -> do
+            writeIORef rightStateRef rightStateTail
+            emit (output, right)
+          Nothing -> stop
 
 left :: (Fetch input -> IO (Fetch output)) -> (Fetch (Either input right) -> IO (Fetch (Either output right)))
 left inputUpdate (Fetch inputOrRightSignal) =
   do
-    rightStateRef <- newIORef mempty
-    outputFetch <- inputUpdate (inputFetch rightStateRef)
-    return (outputOrRightFetch rightStateRef outputFetch)
+    bufferRef <- newIORef mempty
+    outputFetch <- inputUpdate (inputFetch bufferRef)
+    return (outputOrRightFetch bufferRef outputFetch)
   where
-    inputFetch rightStateRef =
-      Fetch $ \signalEnd signalElement ->
+    inputFetch bufferRef =
+      Fetch $ \stop emit ->
       fix $ \loop ->
-      inputOrRightSignal signalEnd $ \case
-        Left input -> signalElement input
-        Right right -> modifyIORef rightStateRef (B.snoc right) >> loop
-    outputOrRightFetch rightStateRef (Fetch outputSignal) =
-      Fetch $ \outputOrRightSignalEnd outputOrRightSignalElement ->
-      do
-        rightState <- readIORef rightStateRef
-        case B.uncons rightState of
-          Just (right, tailRightState) -> do
-            writeIORef rightStateRef tailRightState
-            outputOrRightSignalElement (Right right)
-          Nothing -> do
-            outputSignal outputOrRightSignalEnd (outputOrRightSignalElement . Left)
+      inputOrRightSignal stop $ \case
+        Left input -> emit input
+        Right right -> modifyIORef bufferRef (B.snoc (Right right)) >> loop
+    outputOrRightFetch bufferRef (Fetch fetchOutput) =
+      Fetch $ \stop emit ->
+        let
+          outputStop =
+            do
+              buffer <- readIORef bufferRef
+              case B.uncons buffer of
+                Just (outputOrRight, tailRightState) -> do
+                  writeIORef bufferRef tailRightState
+                  emit outputOrRight
+                Nothing ->
+                  stop
+          outputEmit output =
+            do
+              buffer <- readIORef bufferRef
+              case B.uncons buffer of
+                Just (outputOrRight, tailRightState) -> do
+                  writeIORef bufferRef (B.snoc (Left output) tailRightState)
+                  emit outputOrRight
+                Nothing -> emit (Left output)
+          in
+            fetchOutput outputStop outputEmit
 
 mapFilter :: (input -> Maybe output) -> Fetch input -> Fetch output
 mapFilter mapping (Fetch fetch) =
-  Fetch $ \signalEnd signalOutput ->
+  Fetch $ \stop emit ->
   fix $ \loop ->
-  fetch signalEnd $ \input ->
+  fetch stop $ \input ->
   case mapping input of
-    Just output -> signalOutput output
+    Just output -> emit output
     Nothing -> loop

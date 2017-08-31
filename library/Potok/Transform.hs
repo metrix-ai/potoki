@@ -19,4 +19,4 @@ import qualified Potok.Core.Fetch as D
 {-# INLINE consume #-}
 consume :: B.Consume input output -> C.Transform input output
 consume (B.Consume consume) =
-  C.Transform (D.consume consume)
+  C.Transform (pure . D.consume consume)

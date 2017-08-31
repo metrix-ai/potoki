@@ -39,8 +39,6 @@ instance ArrowChoice Transform where
 
 {-|
 Lift an Attoparsec ByteString parser.
-
-Consumption is non-greedy and terminates when the parser is done.
 -}
 {-# INLINE parseBytes #-}
 parseBytes :: K.Parser parsed -> Transform ByteString (Either Text parsed)
@@ -49,8 +47,6 @@ parseBytes parser =
 
 {-|
 Lift an Attoparsec Text parser.
-
-Consumption is non-greedy and terminates when the parser is done.
 -}
 {-# INLINE parseText #-}
 parseText :: L.Parser parsed -> Transform Text (Either Text parsed)
@@ -58,8 +54,8 @@ parseText parser =
   Transform (A.parseText parser)
 
 take :: Int -> Transform input input
-take =
-  undefined
+take amount =
+  Transform (A.take amount)
 
 {-# INLINE mapFilter #-}
 mapFilter :: (input -> Maybe output) -> Transform input output

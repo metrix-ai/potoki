@@ -2,9 +2,12 @@ module Potok.Consume
 (
   B.Consume,
   transform,
+  B.count,
   B.head,
   B.list,
   B.reverseList,
+  B.concat,
+  B.sum,
   B.writeBytesToFile,
 )
 where

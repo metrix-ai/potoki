@@ -34,6 +34,7 @@ main =
         produceAndConsume list = C.produceAndConsume (E.list list) (consume)
       assertEqual "" [[1,2,3], [4,5,6], [7,8]] =<< produceAndConsume [1,2,3,4,5,6,7,8]
       assertEqual "" [[1,2,3], [4,5,6], [7,8,9]] =<< produceAndConsume [1,2,3,4,5,6,7,8,9]
+      assertEqual "" [] =<< produceAndConsume ([] :: [Int])
     ,
     testCase "File reading" $ do
       let produce =

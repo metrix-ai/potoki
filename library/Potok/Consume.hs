@@ -6,6 +6,7 @@ module Potok.Consume
   B.head,
   B.list,
   B.reverseList,
+  B.concat,
   B.sum,
   B.writeBytesToFile,
 )

@@ -71,6 +71,14 @@ count =
     build send acc =
       send (pure acc) (const (build send (succ acc)))
 
+{-# INLINE concat #-}
+concat :: Monoid monoid => Consume monoid monoid
+concat =
+  Consume $ \(A.Fetch send) -> build send mempty
+  where
+    build send acc =
+      send (pure acc) (\x -> build send (mappend acc x))
+
 {-|
 Overwrite a file.
 

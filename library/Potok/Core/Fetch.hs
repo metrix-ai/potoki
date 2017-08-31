@@ -125,19 +125,30 @@ take amount (Fetch fetchInput) =
           else stop
 
 consume :: (Fetch input -> IO output) -> Fetch input -> IO (Fetch output)
-consume consume (Fetch signal) =
+consume consume (Fetch fetchInput) =
   fetcher <$> newIORef False
   where
     fetcher finishedRef =
-      Fetch $ \stop signalOutput -> do
+      Fetch $ \stop emit -> do
         finished <- readIORef finishedRef
         if finished
           then stop
           else do
-            output <-
-              consume $ Fetch $ \consumeStop consumeEmit ->
-              signal (writeIORef finishedRef True >> consumeStop) consumeEmit
-            signalOutput output
+            peeked <- fetchInput (pure Nothing) (pure . Just)
+            case peeked of
+              Nothing -> stop
+              Just peeked -> do
+                firstRef <- newIORef (Just peeked)
+                output <-
+                  consume $ Fetch $ \consumeStop consumeEmit -> do
+                    firstMaybe <- readIORef firstRef
+                    case firstMaybe of
+                      Just first -> do
+                        writeIORef firstRef Nothing
+                        consumeEmit first
+                      Nothing ->
+                        fetchInput (writeIORef finishedRef True >> consumeStop) consumeEmit
+                emit output
 
 handleBytes :: Handle -> Int -> Fetch (Either IOException ByteString)
 handleBytes handle chunkSize =
@@ -208,9 +219,9 @@ left inputUpdate (Fetch inputOrRightSignal) =
 
 mapFilter :: (input -> Maybe output) -> Fetch input -> Fetch output
 mapFilter mapping (Fetch fetch) =
-  Fetch $ \stop signalOutput ->
+  Fetch $ \stop emit ->
   fix $ \loop ->
   fetch stop $ \input ->
   case mapping input of
-    Just output -> signalOutput output
+    Just output -> emit output
     Nothing -> loop

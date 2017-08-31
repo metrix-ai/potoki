@@ -42,35 +42,6 @@ fetcher :: A.Fetch element -> Produce element
 fetcher fetcher =
   Produce (\fetch -> fetch fetcher)
 
-{-# INLINE mapWithParseResult #-}
-mapWithParseResult :: (input -> I.IResult input parsed) -> Produce input -> Produce (Either Text parsed)
-mapWithParseResult inputToResult (Produce inputIO) =
-  Produce $ \acquiredParsedFetchHandler ->
-  inputIO $ \inputFetch ->
-  do
-    parsedFetch <- A.mapWithParseResult inputToResult inputFetch
-    acquiredParsedFetchHandler parsedFetch
-
-{-|
-Lift an Attoparsec ByteString parser.
-
-Consumption is non-greedy and terminates when the parser is done.
--}
-{-# INLINE parseBytes #-}
-parseBytes :: K.Parser parsed -> Produce ByteString -> Produce (Either Text parsed)
-parseBytes parser =
-  mapWithParseResult (K.parse parser)
-
-{-|
-Lift an Attoparsec Text parser.
-
-Consumption is non-greedy and terminates when the parser is done.
--}
-{-# INLINE parseText #-}
-parseText :: L.Parser parsed -> Produce Text -> Produce (Either Text parsed)
-parseText parser =
-  mapWithParseResult (L.parse parser)
-
 {-|
 Read from a file by path.
 

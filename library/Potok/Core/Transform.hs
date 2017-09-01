@@ -61,3 +61,12 @@ take amount =
 mapFilter :: (input -> Maybe output) -> Transform input output
 mapFilter mapping =
   Transform (pure . A.mapFilter mapping)
+
+{-# INLINE takeWhileIsJust #-}
+takeWhileIsJust :: Transform (Maybe input) input
+takeWhileIsJust =
+  Transform (\(A.Fetch fetch) ->
+    return (A.Fetch (\stop emit ->
+      fetch stop (\case
+        Just input -> emit input
+        Nothing -> stop))))

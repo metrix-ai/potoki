@@ -6,6 +6,7 @@ module Potok.Transform
   C.parseText,
   C.mapFilter,
   C.take,
+  C.takeWhileIsJust,
 )
 where
 

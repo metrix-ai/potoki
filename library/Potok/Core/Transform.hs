@@ -53,6 +53,7 @@ parseText :: L.Parser parsed -> Transform Text (Either Text parsed)
 parseText parser =
   Transform (A.parseText parser)
 
+{-# INLINE take #-}
 take :: Int -> Transform input input
 take amount =
   Transform (A.take amount)

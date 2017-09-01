@@ -27,6 +27,10 @@ main =
     assertEqual "" [1,2,3] =<< 
     C.produceAndConsume (E.list [1,5,2,3]) (D.transform (A.mapFilter (\x -> if x < 5 then Just x else Nothing)) D.list)
     ,
+    testCase "just" $ do
+      result <- C.produceAndConsume (E.list [Just 1, Nothing, Just 2]) (D.transform A.just D.list)
+      assertEqual "" [1,2] result
+    ,
     testCase "transform,consume,take" $ do
       let
         transform = A.consume (D.transform (A.take 3) D.list)

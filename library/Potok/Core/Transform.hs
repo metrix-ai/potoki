@@ -58,10 +58,28 @@ take :: Int -> Transform input input
 take amount =
   Transform (A.take amount)
 
+{-|
+Same as 'arr'.
+-}
+{-# INLINE map #-}
+map :: (input -> output) -> Transform input output
+map mapping =
+  arr mapping
+
 {-# INLINE mapFilter #-}
 mapFilter :: (input -> Maybe output) -> Transform input output
 mapFilter mapping =
   Transform (pure . A.mapFilter mapping)
+
+{-# INLINE just #-}
+just :: Transform (Maybe input) input
+just =
+  Transform $ \(A.Fetch fetch) ->
+  return $ A.Fetch $ \stop emit ->
+  fix $ \loop ->
+  fetch stop $ \case
+    Just input -> emit input
+    Nothing -> loop
 
 {-# INLINE takeWhileIsJust #-}
 takeWhileIsJust :: Transform (Maybe input) input
@@ -71,3 +89,13 @@ takeWhileIsJust =
       fetch stop (\case
         Just input -> emit input
         Nothing -> stop))))
+
+{-# INLINE takeWhile #-}
+takeWhile :: (input -> Bool) -> Transform input input
+takeWhile predicate =
+  Transform $ \(A.Fetch fetch) ->
+  return $ A.Fetch $ \stop emit ->
+  fetch stop $ \input ->
+  if predicate input
+    then emit input
+    else stop

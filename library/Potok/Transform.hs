@@ -5,7 +5,10 @@ module Potok.Transform
   C.parseBytes,
   C.parseText,
   C.mapFilter,
+  C.map,
+  C.just,
   C.take,
+  C.takeWhile,
   C.takeWhileIsJust,
 )
 where

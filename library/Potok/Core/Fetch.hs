@@ -58,40 +58,54 @@ list unsentListRef =
         emit head
       _ -> stop
 
-mapWithParseResult :: forall input parsed. (Monoid input) => (input -> I.IResult input parsed) -> Fetch input -> IO (Fetch (Either Text parsed))
+mapWithParseResult :: forall input parsed. (Monoid input, Eq input) => (input -> I.IResult input parsed) -> Fetch input -> IO (Fetch (Either Text parsed))
 mapWithParseResult inputToResult (Fetch fetchInput) =
   do
-    unconsumedStateRef <- newIORef Nothing
-    return (Fetch (fetchParsed unconsumedStateRef))
+    unconsumedRef <- newIORef mempty
+    finishedRef <- newIORef False
+    return (Fetch (fetchParsed finishedRef unconsumedRef))
   where
-    fetchParsed :: IORef (Maybe input) -> IO x -> (Either Text parsed -> IO x) -> IO x
-    fetchParsed unconsumedStateRef stop emit =
+    fetchParsed :: IORef Bool -> IORef input -> IO x -> (Either Text parsed -> IO x) -> IO x
+    fetchParsed finishedRef unconsumedRef stop emit =
       do
-        unconsumedState <- readIORef unconsumedStateRef
-        case unconsumedState of
-          Just unconsumed -> do
-            writeIORef unconsumedStateRef Nothing
-            matchResult False (inputToResult unconsumed)
-          Nothing -> consume False inputToResult
+        finished <- readIORef finishedRef
+        if finished
+          then stop
+          else do
+            unconsumed <- readIORef unconsumedRef
+            if unconsumed == mempty
+              then
+                fetchInput
+                  stop
+                  (\input -> do
+                    if input == mempty
+                      then do
+                        stop
+                      else matchResult (inputToResult input))
+              else do
+                writeIORef unconsumedRef mempty
+                matchResult (inputToResult unconsumed)
       where
-        matchResult consumed =
+        matchResult =
           \case
             I.Partial inputToResult ->
-              consume consumed inputToResult
+              consume inputToResult
             I.Done unconsumed parsed ->
               do
-                writeIORef unconsumedStateRef (Just unconsumed)
+                writeIORef unconsumedRef unconsumed
                 emit (Right parsed)
             I.Fail unconsumed contexts message ->
               do
-                writeIORef unconsumedStateRef (Just unconsumed)
+                writeIORef unconsumedRef unconsumed
                 emit (Left (fromString (intercalate " > " contexts <> ": " <> message)))
-        consume consumed inputToResult =
+        consume inputToResult =
           fetchInput
-            (if consumed
-              then matchResult True (inputToResult mempty)
-              else stop)
-            (matchResult True . inputToResult)
+            (do
+              writeIORef finishedRef True
+              matchResult (inputToResult mempty))
+            (\input -> do
+              when (input == mempty) (writeIORef finishedRef True)
+              matchResult (inputToResult input))
 
 {-|
 Lift an Attoparsec ByteString parser.

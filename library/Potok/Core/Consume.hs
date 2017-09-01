@@ -79,6 +79,13 @@ concat =
     build send acc =
       send (pure acc) (\x -> build send (mappend acc x))
 
+{-# INLINE print #-}
+print :: Show input => Consume input ()
+print =
+  Consume $ \(A.Fetch fetch) ->
+  fix $ \loop ->
+  fetch (return ()) (\x -> Potok.Prelude.print x >> loop)
+
 {-|
 Overwrite a file.
 

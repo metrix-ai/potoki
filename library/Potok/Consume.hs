@@ -9,6 +9,7 @@ module Potok.Consume
   B.concat,
   B.sum,
   B.writeBytesToFile,
+  B.print,
 )
 where
 

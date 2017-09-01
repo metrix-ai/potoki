@@ -41,7 +41,7 @@ main =
             E.transform (A.mapFilter (either (const Nothing) Just)) $
             E.fileBytes "samples/1"
       result <- C.produceAndConsume produce (fmap F.length D.concat)
-      assertEqual "" 3480 result
+      assertEqual "" 17400 result
     ,
     testCase "Sample 1 parsing" $ do
       let parser = B.double <* B.char ','
@@ -49,6 +49,13 @@ main =
           produce = E.transform transform (E.fileBytes "samples/1")
       result <- C.produceAndConsume produce D.count
       assertEqual "" 4350 result
+    ,
+    testCase "Sample 1 greedy parsing" $ do
+      let parser = B.sepBy B.double (B.char ',')
+          transform = A.mapFilter (either (const Nothing) Just) >>> A.parseBytes parser
+          produce = E.transform transform (E.fileBytes "samples/1")
+      result <- C.produceAndConsume produce D.list
+      assertEqual "" [Right 4350] (fmap (fmap length) result)
     ,
     testCase "Transform order" $ do
       let

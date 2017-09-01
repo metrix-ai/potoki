@@ -97,6 +97,7 @@ mapWithParseResult inputToResult (Fetch fetchInput) =
             I.Fail unconsumed contexts message ->
               do
                 writeIORef unconsumedRef unconsumed
+                writeIORef finishedRef True
                 emit (Left (fromString (intercalate " > " contexts <> ": " <> message)))
         consume inputToResult =
           fetchInput

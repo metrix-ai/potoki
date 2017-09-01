@@ -98,7 +98,12 @@ mapWithParseResult inputToResult (Fetch fetchInput) =
               do
                 writeIORef unconsumedRef unconsumed
                 writeIORef finishedRef True
-                emit (Left (fromString (intercalate " > " contexts <> ": " <> message)))
+                emit (Left resultMessage)
+              where
+                resultMessage =
+                  if null contexts
+                    then fromString message
+                    else fromString (showString (intercalate " > " contexts) (showString ": " message))
         consume inputToResult =
           fetchInput
             (do

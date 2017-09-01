@@ -4,7 +4,6 @@ module Potok.Transform
   consume,
   C.parseBytes,
   C.parseText,
-  C.mapFilter,
   C.map,
   C.just,
   C.take,

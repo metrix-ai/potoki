@@ -1,6 +1,6 @@
-module Potok.Core.Fetch where
+module Potoki.Core.Fetch where
 
-import Potok.Prelude
+import Potoki.Prelude
 import qualified Data.ByteString as A
 import qualified Deque as B
 import qualified Data.Attoparsec.Types as I

@@ -1,7 +1,7 @@
-module Potok.Core.Consume where
+module Potoki.Core.Consume where
 
-import Potok.Prelude
-import qualified Potok.Core.Fetch as A
+import Potoki.Prelude
+import qualified Potoki.Core.Fetch as A
 import qualified Control.Concurrent.Async as B
 import qualified Data.ByteString as C
 
@@ -84,7 +84,7 @@ print :: Show input => Consume input ()
 print =
   Consume $ \(A.Fetch fetch) ->
   fix $ \loop ->
-  fetch (return ()) (\x -> Potok.Prelude.print x >> loop)
+  fetch (return ()) (\x -> Potoki.Prelude.print x >> loop)
 
 {-|
 Overwrite a file.

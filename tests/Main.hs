@@ -7,10 +7,10 @@ import Test.Tasty
 import Test.Tasty.Runners
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
-import qualified Potok.IO as C
-import qualified Potok.Consume as D
-import qualified Potok.Transform as A
-import qualified Potok.Produce as E
+import qualified Potoki.IO as C
+import qualified Potoki.Consume as D
+import qualified Potoki.Transform as A
+import qualified Potoki.Produce as E
 import qualified Data.Attoparsec.ByteString.Char8 as B
 import qualified Data.ByteString as F
 

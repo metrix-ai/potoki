@@ -1,4 +1,4 @@
-module Potok.Consume
+module Potoki.Consume
 (
   B.Consume,
   transform,
@@ -13,11 +13,11 @@ module Potok.Consume
 )
 where
 
-import Potok.Prelude
-import qualified Potok.Core.Produce as A
-import qualified Potok.Core.Consume as B
-import qualified Potok.Core.Transform as C
-import qualified Potok.Core.Fetch as D
+import Potoki.Prelude
+import qualified Potoki.Core.Produce as A
+import qualified Potoki.Core.Consume as B
+import qualified Potoki.Core.Transform as C
+import qualified Potoki.Core.Fetch as D
 
 
 {-# INLINE transform #-}

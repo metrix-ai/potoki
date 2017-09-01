@@ -1,4 +1,4 @@
-module Potok.Prelude
+module Potoki.Prelude
 ( 
   module Exports,
 )

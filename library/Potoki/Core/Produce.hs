@@ -1,7 +1,7 @@
-module Potok.Core.Produce where
+module Potoki.Core.Produce where
 
-import Potok.Prelude
-import qualified Potok.Core.Fetch as A
+import Potoki.Prelude
+import qualified Potoki.Core.Fetch as A
 import qualified Data.Attoparsec.Types as I
 import qualified Data.Attoparsec.ByteString as K
 import qualified Data.Attoparsec.Text as L

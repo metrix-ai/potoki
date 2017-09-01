@@ -14,18 +14,18 @@ description:
   tasks are performed in IO anyway.
   .
   Also, unlike the mentioned libraries,
-  \"potoki\" API doesn't mix streaming with side operations,
+  \"potoki\" API doesn't treat streaming as a side operation in its abstractions,
   which allows it to express the composition of streams using the standard
   typeclass instances, thus simplifying the API even further.
   .
   Naturally, being simpler limits the application area of this library.
   Thus it is not capable of transforming custom context monads and etc.
-  It is a tradeoff.
+  It is a tradeoff, but, as we expect, the user will rarely be affected by it.
   .
   Another benefit of being specialized to IO is the ability to optimize for performance better.
   It must however be mentioned that this is only theoretical and no benchmarks have yet been performed.
   .
-  In some of the mentioned regards it is similar to the \"io-streams\" library.
+  In some of the mentioned regards \"potoki\" is similar to the \"io-streams\" library.
   However, unlike that library it approaches composition with the standard typeclass instances.
   Also, in difference to \"io-streams\", \"potoki\" doesn't use exceptions for control-flow.
   In fact, \"potoki\" doesn't use exceptions whatsoever,

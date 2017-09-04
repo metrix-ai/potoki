@@ -43,20 +43,6 @@ main =
       result <- C.produceAndConsume produce (fmap F.length D.concat)
       assertEqual "" 17400 result
     ,
-    testCase "Sample 1 parsing" $ do
-      let parser = B.double <* B.char ','
-          transform = A.map (either (const Nothing) Just) >>> A.just >>> A.parseBytes parser
-          produce = E.transform transform (E.fileBytes "samples/1")
-      result <- C.produceAndConsume produce D.count
-      assertEqual "" 4350 result
-    ,
-    testCase "Sample 1 greedy parsing" $ do
-      let parser = B.sepBy B.double (B.char ',')
-          transform = A.map (either (const Nothing) Just) >>> A.just >>> A.parseBytes parser
-          produce = E.transform transform (E.fileBytes "samples/1")
-      result <- C.produceAndConsume produce D.list
-      assertEqual "" [Right 4350] (fmap (fmap length) result)
-    ,
     testCase "Transform order" $ do
       let
         list = [Left 1, Right 'z', Left 2, Right 'a', Left 1, Right 'b', Left 0, Right 'x', Left 4, Left 3]
@@ -72,6 +58,8 @@ main =
       assertEqual "" [Left 3, Right 'a'] result
     ,
     transformArrowLaws
+    ,
+    parsing
   ]
 
 transformArrowLaws =
@@ -151,4 +139,30 @@ transformProperty name leftTransform rightTransform =
         transform transform =
           unsafePerformIO (C.produceAndConsume (E.list list) (D.transform transform D.list))
 
-
+parsing :: TestTree
+parsing =
+  testGroup "Parsing"
+  [
+    testCase "Sample 1" $ do
+      let parser = B.double <* B.char ','
+          transform = A.map (either (const Nothing) Just) >>> A.just >>> A.parseBytes parser
+          produce = E.transform transform (E.fileBytes "samples/1")
+      result <- C.produceAndConsume produce D.count
+      assertEqual "" 4350 result
+    ,
+    testCase "Sample 1 greedy" $ do
+      let parser = B.sepBy B.double (B.char ',')
+          transform = A.map (either (const Nothing) Just) >>> A.just >>> A.parseBytes parser
+          produce = E.transform transform (E.fileBytes "samples/1")
+      result <- C.produceAndConsume produce D.list
+      assertEqual "" [Right 4350] (fmap (fmap length) result)
+    ,
+    testCase "Split chunk" $
+    let
+      produce = E.list ["1", "2", "3"]
+      parser = B.anyChar
+      transform = A.parseBytes parser >>> A.map (either (const Nothing) Just) >>> A.just
+      consume = D.transform transform D.count
+      in do
+        assertEqual "" 3 =<< C.produceAndConsume produce consume
+  ]

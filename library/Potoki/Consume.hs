@@ -9,6 +9,7 @@ module Potoki.Consume
   B.concat,
   B.sum,
   B.writeBytesToFile,
+  B.appendBytesToFile,
   B.print,
   B.fold,
   B.foldInIO,

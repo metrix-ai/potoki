@@ -102,6 +102,23 @@ writeBytesToFile path =
       Left exception -> return (Just exception)
       Right () -> return Nothing
 
+{-|
+Append to a file.
+
+* Exception-free
+* Automatic resource management
+-}
+appendBytesToFile :: FilePath -> Consume ByteString (Maybe IOException)
+appendBytesToFile path =
+  Consume $ \fetch -> do
+    exceptionOrUnit <- 
+      try $ withFile path AppendMode $ \handle -> 
+      A.consume fetch $ \bytes -> 
+      C.hPut handle bytes
+    case exceptionOrUnit of
+      Left exception -> return (Just exception)
+      Right () -> return Nothing
+
 fold :: D.Fold input output -> Consume input output
 fold (D.Fold step init finish) =
   Consume $ \(A.Fetch fetch) -> build fetch init

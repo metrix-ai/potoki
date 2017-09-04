@@ -104,17 +104,14 @@ writeBytesToFile path =
 
 fold :: D.Fold input output -> Consume input output
 fold (D.Fold step init finish) =
-  Consume $ \fetch -> do
-    accumulatorRef <- newIORef init
-    A.consume fetch (\input -> modifyIORef' accumulatorRef (\x -> step x input))
-    finish <$> readIORef accumulatorRef
+  Consume $ \(A.Fetch fetch) -> build fetch init
+  where
+    build fetch accumulator =
+      fetch (pure (finish accumulator)) (\input -> build fetch (step accumulator input))
 
 foldInIO :: D.FoldM IO input output -> Consume input output
 foldInIO (D.FoldM step init finish) =
-  Consume $ \fetch -> do
-    accumulatorRef <- newIORef =<< init
-    A.consume fetch $ \input -> do
-      accumulator <- readIORef accumulatorRef
-      newAccumulator <- step accumulator input
-      writeIORef accumulatorRef newAccumulator
-    finish =<< readIORef accumulatorRef
+  Consume $ \(A.Fetch fetch) -> build fetch =<< init
+  where
+    build fetch accumulator =
+      fetch (finish accumulator) (\input -> step accumulator input >>= build fetch)

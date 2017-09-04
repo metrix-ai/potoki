@@ -83,9 +83,7 @@ concat =
 {-# INLINE print #-}
 print :: Show input => Consume input ()
 print =
-  Consume $ \(A.Fetch fetch) ->
-  fix $ \loop ->
-  fetch (return ()) (\x -> Potoki.Prelude.print x >> loop)
+  Consume (\fetch -> A.consume fetch Potoki.Prelude.print)
 
 {-|
 Overwrite a file.
@@ -95,14 +93,14 @@ Overwrite a file.
 -}
 writeBytesToFile :: FilePath -> Consume ByteString (Maybe IOException)
 writeBytesToFile path =
-  Consume $ \(A.Fetch send) -> do
-    exceptionOrUnit <- try $ withFile path WriteMode $ \handle -> write handle send
+  Consume $ \fetch -> do
+    exceptionOrUnit <- 
+      try $ withFile path WriteMode $ \handle -> 
+      A.consume fetch $ \bytes -> 
+      C.hPut handle bytes
     case exceptionOrUnit of
       Left exception -> return (Just exception)
       Right () -> return Nothing
-  where
-    write handle send =
-      fix (\loop -> send (return ()) (\bytes -> C.hPut handle bytes >> loop))
 
 fold :: D.Fold input output -> Consume input output
 fold (D.Fold step init finish) =

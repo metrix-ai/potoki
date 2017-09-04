@@ -150,25 +150,6 @@ take amount (Fetch fetchInput) =
             fetchInput stop emit
           else stop
 
-consume :: (Fetch input -> IO output) -> Fetch input -> Fetch output
-consume consume (Fetch fetchInput) =
-  Fetch $ \stop emit -> do
-    peeked <- fetchInput (pure Nothing) (pure . Just)
-    case peeked of
-      Nothing -> stop
-      Just peeked -> do
-        firstRef <- newIORef (Just peeked)
-        output <-
-          consume $ Fetch $ \consumeStop consumeEmit -> do
-            firstMaybe <- readIORef firstRef
-            case firstMaybe of
-              Just first -> do
-                writeIORef firstRef Nothing
-                consumeEmit first
-              Nothing ->
-                fetchInput consumeStop consumeEmit
-        emit output
-
 handleBytes :: Handle -> Int -> Fetch (Either IOException ByteString)
 handleBytes handle chunkSize =
   Fetch $ \stop emit ->
@@ -199,42 +180,6 @@ first inputUpdate (Fetch fetchInputAndRight) =
             writeIORef rightStateRef rightStateTail
             emit (output, right)
           Nothing -> stop
-
-left :: (Fetch input -> IO (Fetch output)) -> (Fetch (Either input right) -> IO (Fetch (Either output right)))
-left inputUpdate (Fetch inputOrRightSignal) =
-  do
-    bufferRef <- newIORef mempty
-    outputFetch <- inputUpdate (inputFetch bufferRef)
-    return (outputOrRightFetch bufferRef outputFetch)
-  where
-    inputFetch bufferRef =
-      Fetch $ \stop emit ->
-      fix $ \loop ->
-      inputOrRightSignal stop $ \case
-        Left input -> emit input
-        Right right -> modifyIORef bufferRef (B.snoc (Right right)) >> loop
-    outputOrRightFetch bufferRef (Fetch fetchOutput) =
-      Fetch $ \stop emit ->
-        let
-          outputStop =
-            do
-              buffer <- readIORef bufferRef
-              case B.uncons buffer of
-                Just (outputOrRight, tailRightState) -> do
-                  writeIORef bufferRef tailRightState
-                  emit outputOrRight
-                Nothing ->
-                  stop
-          outputEmit output =
-            do
-              buffer <- readIORef bufferRef
-              case B.uncons buffer of
-                Just (outputOrRight, tailRightState) -> do
-                  writeIORef bufferRef (B.snoc (Left output) tailRightState)
-                  emit outputOrRight
-                Nothing -> emit (Left output)
-          in
-            fetchOutput outputStop outputEmit
 
 mapFilter :: (input -> Maybe output) -> Fetch input -> Fetch output
 mapFilter mapping (Fetch fetch) =

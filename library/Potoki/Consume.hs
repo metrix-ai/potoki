@@ -10,6 +10,8 @@ module Potoki.Consume
   B.sum,
   B.writeBytesToFile,
   B.print,
+  B.fold,
+  B.foldInIO,
 )
 where
 

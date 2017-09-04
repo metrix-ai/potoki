@@ -40,6 +40,10 @@ instance Alternative Fetch where
   (<|>) (Fetch leftSignal) (Fetch rightSignal) =
     Fetch (\stop emit -> leftSignal (rightSignal stop emit) emit)
 
+consume :: Fetch element -> (element -> IO ()) -> IO ()
+consume (Fetch fetch) onElement =
+  fix (\loop -> fetch (pure ()) (\element -> onElement element >> loop))
+
 asMaybeIO :: Fetch element -> IO (Maybe element)
 asMaybeIO (Fetch signal) =
   signal (pure Nothing) (pure . Just)

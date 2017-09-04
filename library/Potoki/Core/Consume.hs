@@ -4,6 +4,7 @@ import Potoki.Prelude
 import qualified Potoki.Core.Fetch as A
 import qualified Control.Concurrent.Async as B
 import qualified Data.ByteString as C
+import qualified Control.Foldl as D
 
 
 {-|
@@ -102,3 +103,20 @@ writeBytesToFile path =
   where
     write handle send =
       fix (\loop -> send (return ()) (\bytes -> C.hPut handle bytes >> loop))
+
+fold :: D.Fold input output -> Consume input output
+fold (D.Fold step init finish) =
+  Consume $ \fetch -> do
+    accumulatorRef <- newIORef init
+    A.consume fetch (\input -> modifyIORef' accumulatorRef (\x -> step x input))
+    finish <$> readIORef accumulatorRef
+
+foldInIO :: D.FoldM IO input output -> Consume input output
+foldInIO (D.FoldM step init finish) =
+  Consume $ \fetch -> do
+    accumulatorRef <- newIORef =<< init
+    A.consume fetch $ \input -> do
+      accumulator <- readIORef accumulatorRef
+      newAccumulator <- step accumulator input
+      writeIORef accumulatorRef newAccumulator
+    finish =<< readIORef accumulatorRef

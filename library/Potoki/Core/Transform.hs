@@ -24,8 +24,27 @@ instance Strong Transform where
     Transform (A.first io) 
 
 instance Choice Transform where
-  left' (Transform io) =
-    Transform (A.left io)
+  left' (Transform transform) =
+    Transform $ \(A.Fetch fetchInputOrRight) -> do
+      rightMaybeRef <- newIORef Nothing
+      A.Fetch fetchOutput <-
+        transform $ A.Fetch $ \stop emitInput ->
+        fetchInputOrRight stop $ \case
+          Left left -> emitInput left
+          Right right -> do
+            writeIORef rightMaybeRef (Just right)
+            stop
+      return $ A.Fetch $ \stop emitOutputOrRight -> do
+        fetchOutput
+          (do
+            rightMaybe <- readIORef rightMaybeRef
+            case rightMaybe of
+              Just right -> do
+                writeIORef rightMaybeRef Nothing
+                emitOutputOrRight (Right right)
+              Nothing -> stop)
+          (\output -> emitOutputOrRight (Left output))
+
 
 instance Arrow Transform where
   arr fn =

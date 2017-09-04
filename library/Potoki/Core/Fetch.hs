@@ -200,42 +200,6 @@ first inputUpdate (Fetch fetchInputAndRight) =
             emit (output, right)
           Nothing -> stop
 
-left :: (Fetch input -> IO (Fetch output)) -> (Fetch (Either input right) -> IO (Fetch (Either output right)))
-left inputUpdate (Fetch inputOrRightSignal) =
-  do
-    bufferRef <- newIORef mempty
-    outputFetch <- inputUpdate (inputFetch bufferRef)
-    return (outputOrRightFetch bufferRef outputFetch)
-  where
-    inputFetch bufferRef =
-      Fetch $ \stop emit ->
-      fix $ \loop ->
-      inputOrRightSignal stop $ \case
-        Left input -> emit input
-        Right right -> modifyIORef bufferRef (B.snoc (Right right)) >> loop
-    outputOrRightFetch bufferRef (Fetch fetchOutput) =
-      Fetch $ \stop emit ->
-        let
-          outputStop =
-            do
-              buffer <- readIORef bufferRef
-              case B.uncons buffer of
-                Just (outputOrRight, tailRightState) -> do
-                  writeIORef bufferRef tailRightState
-                  emit outputOrRight
-                Nothing ->
-                  stop
-          outputEmit output =
-            do
-              buffer <- readIORef bufferRef
-              case B.uncons buffer of
-                Just (outputOrRight, tailRightState) -> do
-                  writeIORef bufferRef (B.snoc (Left output) tailRightState)
-                  emit outputOrRight
-                Nothing -> emit (Left output)
-          in
-            fetchOutput outputStop outputEmit
-
 mapFilter :: (input -> Maybe output) -> Fetch input -> Fetch output
 mapFilter mapping (Fetch fetch) =
   Fetch $ \stop emit ->

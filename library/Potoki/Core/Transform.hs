@@ -118,3 +118,31 @@ takeWhile predicate =
   if predicate input
     then emit input
     else stop
+
+{-# INLINE consume #-}
+consume :: (A.Fetch input -> IO output) -> Transform input output
+consume consume =
+  Transform $ \(A.Fetch fetch) -> do
+    stoppedRef <- newIORef False
+    return $ A.Fetch $ \stopOutput emitOutput -> do
+      stopped <- readIORef stoppedRef
+      if stopped
+        then stopOutput
+        else do
+          emittedRef <- newIORef False
+          output <- consume $ A.Fetch $ \stopInput emitInput ->
+            fetch
+              (do
+                writeIORef stoppedRef True
+                stopInput)
+              (\input -> do
+                writeIORef emittedRef True
+                emitInput input)
+          stopped <- readIORef stoppedRef
+          if stopped
+            then do
+              emitted <- readIORef emittedRef
+              if emitted
+                then emitOutput output
+                else stopOutput
+            else emitOutput output

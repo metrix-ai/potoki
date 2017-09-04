@@ -150,25 +150,6 @@ take amount (Fetch fetchInput) =
             fetchInput stop emit
           else stop
 
-consume :: (Fetch input -> IO output) -> Fetch input -> Fetch output
-consume consume (Fetch fetchInput) =
-  Fetch $ \stop emit -> do
-    peeked <- fetchInput (pure Nothing) (pure . Just)
-    case peeked of
-      Nothing -> stop
-      Just peeked -> do
-        firstRef <- newIORef (Just peeked)
-        output <-
-          consume $ Fetch $ \consumeStop consumeEmit -> do
-            firstMaybe <- readIORef firstRef
-            case firstMaybe of
-              Just first -> do
-                writeIORef firstRef Nothing
-                consumeEmit first
-              Nothing ->
-                fetchInput consumeStop consumeEmit
-        emit output
-
 handleBytes :: Handle -> Int -> Fetch (Either IOException ByteString)
 handleBytes handle chunkSize =
   Fetch $ \stop emit ->

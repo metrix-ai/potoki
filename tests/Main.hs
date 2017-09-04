@@ -45,10 +45,10 @@ main =
     ,
     testCase "Transform order" $ do
       let
-        list = [Left 1, Right 'z', Left 2, Right 'a', Left 1, Right 'b', Left 0, Right 'x', Left 4, Left 3]
+        list = [Left 1, Left 2, Right 'z', Left 2, Right 'a', Left 1, Right 'b', Left 0, Right 'x', Left 4, Left 3]
         transform = left (A.consume (D.transform (A.take 2) D.sum))
       result <- C.produceAndConsume (E.list list) (D.transform transform D.list)
-      assertEqual "" [Right 'z', Left 3, Right 'a', Right 'b', Left 1, Right 'x', Left 7] result
+      assertEqual "" [Left 3, Right 'z'] result
     ,
     testCase "Transform interrupted order" $ do
       let

@@ -22,4 +22,4 @@ import qualified Potoki.Core.Fetch as D
 {-# INLINE consume #-}
 consume :: B.Consume input output -> C.Transform input output
 consume (B.Consume consume) =
-  C.Transform (pure . D.consume consume)
+  C.consume consume

@@ -41,7 +41,7 @@ list :: Consume input [input]
 list =
   Consume $ \(A.Fetch send) -> build send id
   where
-    build send acc =
+    build send !acc =
       send (pure (acc [])) (\element -> build send (acc . (:) element))
 
 {-|
@@ -53,7 +53,7 @@ reverseList :: Consume input [input]
 reverseList =
   Consume $ \(A.Fetch send) -> build send []
   where
-    build send acc =
+    build send !acc =
       send (pure acc) (\element -> build send (element : acc))
 
 {-# INLINE sum #-}
@@ -61,7 +61,7 @@ sum :: Num num => Consume num num
 sum =
   Consume $ \(A.Fetch send) -> build send 0
   where
-    build send acc =
+    build send !acc =
       send (pure acc) (\x -> build send (x + acc))
 
 {-# INLINE count #-}
@@ -69,7 +69,7 @@ count :: Consume input Int
 count =
   Consume $ \(A.Fetch send) -> build send 0
   where
-    build send acc =
+    build send !acc =
       send (pure acc) (const (build send (succ acc)))
 
 {-# INLINE concat #-}
@@ -77,7 +77,7 @@ concat :: Monoid monoid => Consume monoid monoid
 concat =
   Consume $ \(A.Fetch send) -> build send mempty
   where
-    build send acc =
+    build send !acc =
       send (pure acc) (\x -> build send (mappend acc x))
 
 {-# INLINE print #-}
@@ -123,12 +123,12 @@ fold :: D.Fold input output -> Consume input output
 fold (D.Fold step init finish) =
   Consume $ \(A.Fetch fetch) -> build fetch init
   where
-    build fetch accumulator =
-      fetch (pure (finish accumulator)) (\input -> build fetch (step accumulator input))
+    build fetch !accumulator =
+      fetch (pure (finish accumulator)) (\(!input) -> build fetch (step accumulator input))
 
 foldInIO :: D.FoldM IO input output -> Consume input output
 foldInIO (D.FoldM step init finish) =
   Consume $ \(A.Fetch fetch) -> build fetch =<< init
   where
-    build fetch accumulator =
-      fetch (finish accumulator) (\input -> step accumulator input >>= build fetch)
+    build fetch !accumulator =
+      fetch (finish accumulator) (\(!input) -> step accumulator input >>= build fetch)

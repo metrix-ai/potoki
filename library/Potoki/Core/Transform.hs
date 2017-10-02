@@ -23,6 +23,11 @@ instance Strong Transform where
   first' (Transform io) =
     Transform (A.first io) 
 
+{-|
+The behaviour of this instance is that it stops on the first appearance of the opposite input.
+I.e., if you focus on the left values, it'll apply the transform to all the left values up until
+the first right value and will emit the result of the transform followed by the right value.
+-}
 instance Choice Transform where
   left' (Transform transform) =
     Transform $ \(A.Fetch fetchInputOrRight) -> do

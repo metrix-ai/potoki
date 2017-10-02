@@ -50,6 +50,27 @@ main =
       result <- C.produceAndConsume (E.list list) (D.transform transform D.list)
       assertEqual "" [Left 3, Right 'z'] result
     ,
+    testCase "Transform choice 1" $ do
+      let
+        list = [Left 1, Left 2, Right 'z', Left 2, Right 'a', Left 1, Right 'b', Left 0, Right 'x', Left 4, Left 3]
+        transform = left (A.consume D.sum)
+      result <- C.produceAndConsume (E.list list) (D.transform transform D.list)
+      assertEqual "" [Left 3, Right 'z'] result
+    ,
+    testCase "Transform choice 2" $ do
+      let
+        list = [Left 1, Left 2, Right 'z', Left 2, Right 'a', Left 1, Right 'b', Left 0, Right 'x', Left 4, Left 3]
+        transform = right (A.consume D.list)
+      result <- C.produceAndConsume (E.list list) (D.transform transform D.list)
+      assertEqual "" [Left 1] result
+    ,
+    testCase "Transform choice 3" $ do
+      let
+        list = [Right 'z', Right 'a', Left 3, Right 'b', Left 0, Right 'x', Left 4, Left 3]
+        transform = right (A.consume D.list)
+      result <- C.produceAndConsume (E.list list) (D.transform transform D.list)
+      assertEqual "" [Right "za",Left 3] result
+    ,
     testCase "Transform interrupted order" $ do
       let
         list = [Left 1, Left 2, Right 'a']

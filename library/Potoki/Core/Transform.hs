@@ -45,7 +45,6 @@ instance Choice Transform where
               Nothing -> stop)
           (\output -> emitOutputOrRight (Left output))
 
-
 instance Arrow Transform where
   arr fn =
     Transform (pure . fmap fn)

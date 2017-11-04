@@ -84,6 +84,7 @@ library
     deque >=0.2 && <0.3,
     -- 
     async >=2.1 && <3,
+    unagi-chan >=0.4 && <0.5,
     -- 
     foldl >=1.3 && <2,
     contravariant >=1.4 && <2,

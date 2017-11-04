@@ -4,6 +4,7 @@ import Potoki.Prelude
 import qualified Potoki.Core.Fetch as A
 import qualified Data.Attoparsec.ByteString as K
 import qualified Data.Attoparsec.Text as L
+import qualified Control.Concurrent.Chan.Unagi as B
 
 
 newtype Transform input output =
@@ -150,3 +151,16 @@ consume consume =
                 then emitOutput output
                 else stopOutput
             else emitOutput output
+
+{-# INLINE bufferize #-}
+bufferize :: Transform element element
+bufferize =
+  Transform $ \(A.Fetch fetch) -> do
+    (inChan, outChan) <- B.newChan
+    forkIO $ fix $ \ loop ->
+      fetch
+        (B.writeChan inChan Nothing)
+        (\ element -> do
+          B.writeChan inChan $! Just $! element
+          loop)
+    return $ A.Fetch $ \stop emit -> B.readChan outChan >>= maybe stop emit

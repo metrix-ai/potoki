@@ -36,3 +36,7 @@ import Data.Text as Exports (Text)
 -- bytestring
 -------------------------
 import Data.ByteString as Exports (ByteString)
+
+-- bug
+-------------------------
+import Bug as Exports

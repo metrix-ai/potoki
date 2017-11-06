@@ -62,6 +62,28 @@ list unsentListRef =
         emit head
       _ -> stop
 
+{-# INLINE consumeWithParseResult #-}
+consumeWithParseResult :: forall input parsed. (Monoid input, Eq input) => (input -> I.IResult input parsed) -> Fetch input -> IO (Either Text parsed)
+consumeWithParseResult inputToResult (Fetch fetchInput) =
+  consume inputToResult
+  where
+    consume inputToResult =
+      fetchInput stop emit
+      where
+        stop =
+          emit mempty
+        emit !input =
+          case inputToResult input of
+            I.Partial newInputToResult -> consume newInputToResult
+            I.Done _ parsed -> return (Right parsed)
+            I.Fail _ contexts message -> return (Left resultMessage)
+              where
+                resultMessage =
+                  if null contexts
+                    then fromString message
+                    else fromString (showString (intercalate " > " contexts) (showString ": " message))
+
+{-# INLINE mapWithParseResult #-}
 mapWithParseResult :: forall input parsed. (Monoid input, Eq input) => (input -> I.IResult input parsed) -> Fetch input -> IO (Fetch (Either Text parsed))
 mapWithParseResult inputToResult (Fetch fetchInput) =
   do
@@ -116,6 +138,26 @@ mapWithParseResult inputToResult (Fetch fetchInput) =
             (\input -> do
               when (input == mempty) (writeIORef finishedRef True)
               matchResult (inputToResult input))
+
+{-|
+Lift an Attoparsec ByteString parser.
+
+Consumption is non-greedy and terminates when the parser is done.
+-}
+{-# INLINE consumeWithBytesParser #-}
+consumeWithBytesParser :: K.Parser parsed -> Fetch ByteString -> IO (Either Text parsed)
+consumeWithBytesParser parser =
+  consumeWithParseResult (K.parse parser)
+
+{-|
+Lift an Attoparsec Text parser.
+
+Consumption is non-greedy and terminates when the parser is done.
+-}
+{-# INLINE consumeWithTextParser #-}
+consumeWithTextParser :: L.Parser parsed -> Fetch Text -> IO (Either Text parsed)
+consumeWithTextParser parser =
+  consumeWithParseResult (L.parse parser)
 
 {-|
 Lift an Attoparsec ByteString parser.

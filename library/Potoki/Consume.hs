@@ -13,6 +13,8 @@ module Potoki.Consume
   B.print,
   B.fold,
   B.foldInIO,
+  B.parseBytes,
+  B.parseText,
 )
 where
 

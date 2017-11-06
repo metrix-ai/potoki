@@ -5,6 +5,8 @@ import qualified Potoki.Core.Fetch as A
 import qualified Control.Concurrent.Async as B
 import qualified Data.ByteString as C
 import qualified Control.Foldl as D
+import qualified Data.Attoparsec.ByteString as E
+import qualified Data.Attoparsec.Text as F
 
 
 {-|
@@ -132,3 +134,11 @@ foldInIO (D.FoldM step init finish) =
   where
     build fetch !accumulator =
       fetch (finish accumulator) (\ !input -> step accumulator input >>= build fetch)
+
+parseBytes :: E.Parser output -> Consume ByteString (Either Text output)
+parseBytes parser =
+  Consume $ A.consumeWithBytesParser parser
+
+parseText :: F.Parser output -> Consume Text (Either Text output)
+parseText parser =
+  Consume $ A.consumeWithTextParser parser

@@ -20,7 +20,7 @@ newtype Consume input output =
 instance Profunctor Consume where
   {-# INLINE dimap #-}
   dimap inputMapping outputMapping (Consume consume) =
-    Consume (\fetch -> fmap outputMapping (consume (fmap inputMapping fetch)))
+    Consume (\ fetch -> fmap outputMapping (consume (fmap inputMapping fetch)))
 
 instance Functor (Consume input) where
   fmap = rmap
@@ -29,20 +29,20 @@ instance Applicative (Consume input) where
   pure x =
     Consume (const (pure x))
   (<*>) (Consume leftConsume) (Consume rightConsume) =
-    Consume (\fetch -> leftConsume fetch <*> rightConsume fetch)
+    Consume (\ fetch -> leftConsume fetch <*> rightConsume fetch)
 
 {-# INLINE head #-}
 head :: Consume input (Maybe input)
 head =
-  Consume (\(A.Fetch send) -> send (pure Nothing) (pure . Just))
+  Consume (\ (A.Fetch send) -> send (pure Nothing) (pure . Just))
 
 {-# INLINE list #-}
 list :: Consume input [input]
 list =
-  Consume $ \(A.Fetch send) -> build send id
+  Consume $ \ (A.Fetch send) -> build send id
   where
     build send !acc =
-      send (pure (acc [])) (\element -> build send (acc . (:) element))
+      send (pure (acc [])) (\ element -> build send (acc . (:) element))
 
 {-|
 A faster alternative to "list",
@@ -51,23 +51,23 @@ which however produces the list in the reverse order.
 {-# INLINE reverseList #-}
 reverseList :: Consume input [input]
 reverseList =
-  Consume $ \(A.Fetch send) -> build send []
+  Consume $ \ (A.Fetch send) -> build send []
   where
     build send !acc =
-      send (pure acc) (\element -> build send (element : acc))
+      send (pure acc) (\ element -> build send (element : acc))
 
 {-# INLINE sum #-}
 sum :: Num num => Consume num num
 sum =
-  Consume $ \(A.Fetch send) -> build send 0
+  Consume $ \ (A.Fetch send) -> build send 0
   where
     build send !acc =
-      send (pure acc) (\x -> build send (x + acc))
+      send (pure acc) (\ x -> build send (x + acc))
 
 {-# INLINE count #-}
 count :: Consume input Int
 count =
-  Consume $ \(A.Fetch send) -> build send 0
+  Consume $ \ (A.Fetch send) -> build send 0
   where
     build send !acc =
       send (pure acc) (const (build send (succ acc)))
@@ -75,15 +75,15 @@ count =
 {-# INLINE concat #-}
 concat :: Monoid monoid => Consume monoid monoid
 concat =
-  Consume $ \(A.Fetch send) -> build send mempty
+  Consume $ \ (A.Fetch send) -> build send mempty
   where
     build send !acc =
-      send (pure acc) (\x -> build send (mappend acc x))
+      send (pure acc) (\ x -> build send (mappend acc x))
 
 {-# INLINE print #-}
 print :: Show input => Consume input ()
 print =
-  Consume (\fetch -> A.consume fetch Potoki.Prelude.print)
+  Consume (\ fetch -> A.consume fetch Potoki.Prelude.print)
 
 {-|
 Overwrite a file.
@@ -93,10 +93,10 @@ Overwrite a file.
 -}
 writeBytesToFile :: FilePath -> Consume ByteString (Maybe IOException)
 writeBytesToFile path =
-  Consume $ \fetch -> do
+  Consume $ \ fetch -> do
     exceptionOrUnit <- 
-      try $ withFile path WriteMode $ \handle -> 
-      A.consume fetch $ \bytes -> 
+      try $ withFile path WriteMode $ \ handle -> 
+      A.consume fetch $ \ bytes -> 
       C.hPut handle bytes
     case exceptionOrUnit of
       Left exception -> return (Just exception)
@@ -110,10 +110,10 @@ Append to a file.
 -}
 appendBytesToFile :: FilePath -> Consume ByteString (Maybe IOException)
 appendBytesToFile path =
-  Consume $ \fetch -> do
+  Consume $ \ fetch -> do
     exceptionOrUnit <- 
-      try $ withFile path AppendMode $ \handle -> 
-      A.consume fetch $ \bytes -> 
+      try $ withFile path AppendMode $ \ handle -> 
+      A.consume fetch $ \ bytes -> 
       C.hPut handle bytes
     case exceptionOrUnit of
       Left exception -> return (Just exception)
@@ -121,14 +121,14 @@ appendBytesToFile path =
 
 fold :: D.Fold input output -> Consume input output
 fold (D.Fold step init finish) =
-  Consume $ \(A.Fetch fetch) -> build fetch init
+  Consume $ \ (A.Fetch fetch) -> build fetch init
   where
     build fetch !accumulator =
-      fetch (pure (finish accumulator)) (\(!input) -> build fetch (step accumulator input))
+      fetch (pure (finish accumulator)) (\ !input -> build fetch (step accumulator input))
 
 foldInIO :: D.FoldM IO input output -> Consume input output
 foldInIO (D.FoldM step init finish) =
-  Consume $ \(A.Fetch fetch) -> build fetch =<< init
+  Consume $ \ (A.Fetch fetch) -> build fetch =<< init
   where
     build fetch !accumulator =
-      fetch (finish accumulator) (\(!input) -> step accumulator input >>= build fetch)
+      fetch (finish accumulator) (\ !input -> step accumulator input >>= build fetch)

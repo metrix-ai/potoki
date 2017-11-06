@@ -122,9 +122,9 @@ Lift an Attoparsec ByteString parser.
 
 Consumption is non-greedy and terminates when the parser is done.
 -}
-{-# INLINE parseBytes #-}
-parseBytes :: K.Parser parsed -> Fetch ByteString -> IO (Fetch (Either Text parsed))
-parseBytes parser =
+{-# INLINE mapWithBytesParser #-}
+mapWithBytesParser :: K.Parser parsed -> Fetch ByteString -> IO (Fetch (Either Text parsed))
+mapWithBytesParser parser =
   mapWithParseResult (K.parse parser)
 
 {-|
@@ -132,9 +132,9 @@ Lift an Attoparsec Text parser.
 
 Consumption is non-greedy and terminates when the parser is done.
 -}
-{-# INLINE parseText #-}
-parseText :: L.Parser parsed -> Fetch Text -> IO (Fetch (Either Text parsed))
-parseText parser =
+{-# INLINE mapWithTextParser #-}
+mapWithTextParser :: L.Parser parsed -> Fetch Text -> IO (Fetch (Either Text parsed))
+mapWithTextParser parser =
   mapWithParseResult (L.parse parser)
 
 duplicate :: Fetch element -> IO (Fetch element, Fetch element)

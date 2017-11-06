@@ -2,8 +2,8 @@ module Potoki.Transform
 (
   C.Transform,
   consume,
-  C.parseBytes,
-  C.parseText,
+  C.mapWithBytesParser,
+  C.mapWithTextParser,
   C.map,
   C.just,
   C.take,

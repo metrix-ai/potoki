@@ -99,7 +99,12 @@ mapFilter mapping =
 {-# INLINE just #-}
 just :: Transform (Maybe input) input
 just =
-  takeWhileIsJust
+  Transform $ \(A.Fetch fetch) ->
+  return $ A.Fetch $ \stop emit ->
+  fix $ \loop ->
+  fetch stop $ \case
+    Just input -> emit input
+    Nothing -> loop
 
 {-# INLINE takeWhileIsJust #-}
 takeWhileIsJust :: Transform (Maybe input) input

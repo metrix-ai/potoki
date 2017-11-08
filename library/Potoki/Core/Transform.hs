@@ -64,17 +64,17 @@ instance ArrowChoice Transform where
 {-|
 Lift an Attoparsec ByteString parser.
 -}
-{-# INLINE mapWithBytesParser #-}
-mapWithBytesParser :: K.Parser parsed -> Transform ByteString (Either Text parsed)
-mapWithBytesParser parser =
+{-# INLINE parseBytes #-}
+parseBytes :: K.Parser parsed -> Transform ByteString (Either Text parsed)
+parseBytes parser =
   Transform (A.mapWithBytesParser parser)
 
 {-|
 Lift an Attoparsec Text parser.
 -}
-{-# INLINE mapWithTextParser #-}
-mapWithTextParser :: L.Parser parsed -> Transform Text (Either Text parsed)
-mapWithTextParser parser =
+{-# INLINE parseText #-}
+parseText :: L.Parser parsed -> Transform Text (Either Text parsed)
+parseText parser =
   Transform (A.mapWithTextParser parser)
 
 {-# INLINE take #-}

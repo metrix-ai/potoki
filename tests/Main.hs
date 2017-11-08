@@ -166,14 +166,14 @@ parsing =
   [
     testCase "Sample 1" $ do
       let parser = B.double <* B.char ','
-          transform = A.map (either (const Nothing) Just) >>> A.just >>> A.mapWithBytesParser parser
+          transform = A.map (either (const Nothing) Just) >>> A.just >>> A.parseBytes parser
           produce = E.transform transform (E.fileBytes "samples/1")
       result <- C.produceAndConsume produce D.count
       assertEqual "" 4350 result
     ,
     testCase "Sample 1 greedy" $ do
       let parser = B.sepBy B.double (B.char ',')
-          transform = A.map (either (const Nothing) Just) >>> A.just >>> A.mapWithBytesParser parser
+          transform = A.map (either (const Nothing) Just) >>> A.just >>> A.parseBytes parser
           produce = E.transform transform (E.fileBytes "samples/1")
       result <- C.produceAndConsume produce D.list
       assertEqual "" [Right 4350] (fmap (fmap length) result)
@@ -182,7 +182,7 @@ parsing =
     let
       produce = E.list ["1", "2", "3"]
       parser = B.anyChar
-      transform = A.mapWithBytesParser parser >>> A.map (either (const Nothing) Just) >>> A.just
+      transform = A.parseBytes parser >>> A.map (either (const Nothing) Just) >>> A.just
       consume = D.transform transform D.count
       in do
         assertEqual "" 3 =<< C.produceAndConsume produce consume

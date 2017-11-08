@@ -7,6 +7,7 @@ import qualified Data.ByteString as C
 import qualified Control.Foldl as D
 import qualified Data.Attoparsec.ByteString as E
 import qualified Data.Attoparsec.Text as F
+import qualified System.Directory as G
 
 
 {-|
@@ -117,6 +118,15 @@ appendBytesToFile path =
       try $ withFile path AppendMode $ \ handle -> 
       A.consume fetch $ \ bytes -> 
       C.hPut handle bytes
+    case exceptionOrUnit of
+      Left exception -> return (Just exception)
+      Right () -> return Nothing
+
+deleteFiles :: Consume FilePath (Maybe IOException)
+deleteFiles =
+  Consume $ \ fetch -> do
+    exceptionOrUnit <- 
+      try $ A.consume fetch G.removeFile
     case exceptionOrUnit of
       Left exception -> return (Just exception)
       Right () -> return Nothing

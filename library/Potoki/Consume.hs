@@ -10,6 +10,7 @@ module Potoki.Consume
   B.sum,
   B.writeBytesToFile,
   B.appendBytesToFile,
+  B.deleteFiles,
   B.print,
   B.fold,
   B.foldInIO,

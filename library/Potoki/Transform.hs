@@ -5,6 +5,7 @@ module Potoki.Transform
   C.parseBytes,
   C.parseText,
   C.map,
+  C.mapFilter,
   C.just,
   C.take,
   C.takeWhile,

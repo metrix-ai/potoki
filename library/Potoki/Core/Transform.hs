@@ -164,3 +164,13 @@ bufferize =
           B.writeChan inChan $! Just $! element
           loop)
     return $ A.Fetch $ \stop emit -> B.readChan outChan >>= maybe stop emit
+
+{-|
+Execute the IO action.
+-}
+{-# INLINE executeIO #-}
+executeIO :: Transform (IO a) a
+executeIO =
+  Transform $ \(A.Fetch fetch) ->
+  return $ A.Fetch $ \stop emit ->
+  fetch stop (\ io -> io >>= emit)

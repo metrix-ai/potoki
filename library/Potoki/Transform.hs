@@ -9,6 +9,8 @@ module Potoki.Transform
   C.take,
   C.takeWhile,
   C.takeWhileIsJust,
+  C.bufferize,
+  C.executeIO,
 )
 where
 

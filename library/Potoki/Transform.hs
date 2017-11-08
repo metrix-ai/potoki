@@ -13,6 +13,8 @@ module Potoki.Transform
   C.takeWhileIsRight,
   C.bufferize,
   C.executeIO,
+  C.deleteFile,
+  C.appendBytesToFile,
 )
 where
 

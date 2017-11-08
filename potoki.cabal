@@ -74,6 +74,7 @@ library
     Potoki.Core.Fetch
     Potoki.Core.Consume
     Potoki.Core.Transform
+    Potoki.Core.IO
     Potoki.Prelude
   build-depends:
     -- 

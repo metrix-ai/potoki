@@ -5,6 +5,7 @@ import qualified Potoki.Core.Fetch as A
 import qualified Data.Attoparsec.ByteString as K
 import qualified Data.Attoparsec.Text as L
 import qualified Control.Concurrent.Chan.Unagi as B
+import qualified Potoki.Core.IO as G
 
 
 newtype Transform input output =
@@ -187,3 +188,24 @@ executeIO =
   Transform $ \(A.Fetch fetch) ->
   return $ A.Fetch $ \stop emit ->
   fetch stop (\ io -> io >>= emit)
+
+{-# INLINE failingIO #-}
+failingIO :: (a -> IO (Either error ())) -> Transform a error
+failingIO io =
+  Transform $ \ (A.Fetch fetch) ->
+  return $ A.Fetch $ \ stop emit ->
+  fix $ \ loop ->
+  fetch stop $ \ input ->
+  io input >>= \ case
+    Right () -> loop
+    Left exception -> emit exception
+
+{-# INLINE deleteFile #-}
+deleteFile :: Transform FilePath IOException
+deleteFile =
+  failingIO G.deleteFile
+
+{-# INLINE appendBytesToFile #-}
+appendBytesToFile :: Transform (FilePath, ByteString) IOException
+appendBytesToFile =
+  failingIO (uncurry G.appendBytesToFile)

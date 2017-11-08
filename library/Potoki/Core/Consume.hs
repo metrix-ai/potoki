@@ -25,6 +25,19 @@ instance Profunctor Consume where
   dimap inputMapping outputMapping (Consume consume) =
     Consume (\ fetch -> fmap outputMapping (consume (fmap inputMapping fetch)))
 
+instance Choice Consume where
+  right' (Consume consumeRight) =
+    Consume $ \ (A.Fetch fetchEither) -> do
+      fetchedLeftMaybeVar <- newIORef Nothing
+      consumedRight <- consumeRight $ A.Fetch $ \ stop emit ->
+        fetchEither stop $ \ case
+          Right fetchedRight -> emit fetchedRight
+          Left fetchedLeft -> writeIORef fetchedLeftMaybeVar (Just fetchedLeft) >> stop
+      fetchedLeftMaybe <- readIORef fetchedLeftMaybeVar
+      case fetchedLeftMaybe of
+        Nothing -> return (Right consumedRight)
+        Just fetchedLeft -> return (Left fetchedLeft)
+
 instance Functor (Consume input) where
   fmap = rmap
 

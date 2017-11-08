@@ -98,12 +98,7 @@ mapFilter mapping =
 {-# INLINE just #-}
 just :: Transform (Maybe input) input
 just =
-  Transform $ \(A.Fetch fetch) ->
-  return $ A.Fetch $ \stop emit ->
-  fix $ \loop ->
-  fetch stop $ \case
-    Just input -> emit input
-    Nothing -> loop
+  takeWhileIsJust
 
 {-# INLINE takeWhileIsJust #-}
 takeWhileIsJust :: Transform (Maybe input) input
@@ -113,6 +108,24 @@ takeWhileIsJust =
       fetch stop (\case
         Just input -> emit input
         Nothing -> stop))))
+
+{-# INLINE takeWhileIsLeft #-}
+takeWhileIsLeft :: Transform (Either left right) left
+takeWhileIsLeft =
+  Transform (\(A.Fetch fetch) ->
+    return (A.Fetch (\stop emit ->
+      fetch stop (\case
+        Left input -> emit input
+        _ -> stop))))
+
+{-# INLINE takeWhileIsRight #-}
+takeWhileIsRight :: Transform (Either left right) right
+takeWhileIsRight =
+  Transform (\(A.Fetch fetch) ->
+    return (A.Fetch (\stop emit ->
+      fetch stop (\case
+        Right input -> emit input
+        _ -> stop))))
 
 {-# INLINE takeWhile #-}
 takeWhile :: (input -> Bool) -> Transform input input

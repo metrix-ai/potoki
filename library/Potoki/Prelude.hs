@@ -37,6 +37,10 @@ import Data.Text as Exports (Text)
 -------------------------
 import Data.ByteString as Exports (ByteString)
 
+-- unordered-containers
+-------------------------
+import Data.HashMap.Strict as Exports (HashMap)
+
 -- bug
 -------------------------
 import Bug as Exports

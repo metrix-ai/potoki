@@ -5,6 +5,7 @@ import qualified Potoki.Core.Fetch as A
 import qualified Data.Attoparsec.Types as I
 import qualified Data.Attoparsec.ByteString as K
 import qualified Data.Attoparsec.Text as L
+import qualified Data.HashMap.Strict as B
 
 
 newtype Produce element =
@@ -60,6 +61,12 @@ fileBytes path =
     chunkSize =
       shiftL 2 12
 
+{-# INLINE list #-}
 list :: [input] -> Produce input
 list list =
   Produce (\fetch -> newIORef list >>= fetch . A.list)
+
+{-# INLINE hashMapRows #-}
+hashMapRows :: HashMap a b -> Produce (a, b)
+hashMapRows =
+  list . B.toList

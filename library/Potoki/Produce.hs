@@ -3,6 +3,7 @@ module Potoki.Produce
   A.Produce,
   transform,
   A.list,
+  A.hashMapRows,
   A.fileBytes,
 )
 where

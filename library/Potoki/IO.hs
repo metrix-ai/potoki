@@ -11,10 +11,10 @@ produceAndConsume :: A.Produce input -> B.Consume input output -> IO output
 produceAndConsume (A.Produce produce) (B.Consume consume) =
   produce consume
 
-produce :: A.Produce input -> forall x. IO x -> (input -> IO x) -> IO x
-produce (A.Produce produce) stop emit =
-  produce (\ (D.Fetch fetch) -> fetch stop emit)
+produce :: A.Produce input -> forall x. x -> (input -> x) -> IO x
+produce (A.Produce produce) end element =
+  produce (\ (D.Fetch fetch) -> fetch (return end) (return . element))
 
-consume :: (forall x. IO x -> (input -> IO x) -> IO x) -> B.Consume input output -> IO output
+consume :: (forall x. x -> (input -> x) -> IO x) -> B.Consume input output -> IO output
 consume fetch (B.Consume consume) =
-  consume (D.Fetch fetch)
+  consume (D.Fetch (\ stop emit -> join (fetch stop emit)))

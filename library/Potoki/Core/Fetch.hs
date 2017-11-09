@@ -8,6 +8,9 @@ import qualified Data.Attoparsec.ByteString as K
 import qualified Data.Attoparsec.Text as L
 
 
+{-|
+Passive producer of elements.
+-}
 newtype Fetch element =
   {-|
   Church encoding of @IO (Maybe element)@.

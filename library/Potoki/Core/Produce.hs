@@ -8,6 +8,9 @@ import qualified Data.Attoparsec.Text as L
 import qualified Data.HashMap.Strict as B
 
 
+{-|
+Active producer of elements with support for early termination.
+-}
 newtype Produce element =
   Produce (forall x. (A.Fetch element -> IO x) -> IO x)
 

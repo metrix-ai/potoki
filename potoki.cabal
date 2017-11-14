@@ -1,7 +1,7 @@
 name:
   potoki
 version:
-  0.5.1
+  0.5.2
 synopsis:
   Simple streaming in IO
 description:
@@ -70,13 +70,10 @@ library
     Potoki.Consume
     Potoki.Transform
   other-modules:
-    Potoki.Core.Produce
-    Potoki.Core.Fetch
-    Potoki.Core.Consume
-    Potoki.Core.Transform
-    Potoki.Core.IO
     Potoki.Prelude
   build-depends:
+    -- 
+    potoki-core >=0.6 && <0.7,
     -- 
     attoparsec >=0.13 && <0.15,
     -- 

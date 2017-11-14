@@ -1,7 +1,7 @@
 name:
   potoki
 version:
-  0.5.2
+  0.5.3
 synopsis:
   Simple streaming in IO
 description:
@@ -73,7 +73,7 @@ library
     Potoki.Prelude
   build-depends:
     -- 
-    potoki-core >=0.6 && <0.7,
+    potoki-core >=0.6.1 && <0.7,
     -- 
     attoparsec >=0.13 && <0.15,
     -- 

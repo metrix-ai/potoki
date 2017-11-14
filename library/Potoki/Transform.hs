@@ -16,6 +16,7 @@ module Potoki.Transform
   C.executeIO,
   C.deleteFile,
   C.appendBytesToFile,
+  C.distinct,
 )
 where
 

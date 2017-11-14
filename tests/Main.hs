@@ -78,6 +78,12 @@ main =
       result <- C.produceAndConsume (E.list list) (D.transform transform D.list)
       assertEqual "" [Left 3, Right 'a'] result
     ,
+    testCase "Transform distinct" $ do
+      let
+        list = [1,2,3,2,3,2,1,4,1] :: [Int]
+      result <- C.produceAndConsume (E.list list) (D.transform A.distinct D.list)
+      assertEqual "" [1,2,3,4] result
+    ,
     transformArrowLaws
     ,
     parsing

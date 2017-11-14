@@ -64,6 +64,26 @@ fileBytes path =
     chunkSize =
       shiftL 2 12
 
+{-|
+Read from a file by path.
+
+* Exception-free
+* Automatic resource management
+-}
+{-# INLINABLE fileBytesAtOffset #-}
+fileBytesAtOffset :: FilePath -> Int -> Produce (Either IOException ByteString)
+fileBytesAtOffset path offset =
+  Produce $ \fetch -> do
+    exceptionOrResult <- try $ withFile path ReadMode $ \handle -> do
+      hSeek handle AbsoluteSeek (fromIntegral offset)
+      fetch $ A.handleBytes handle chunkSize
+    case exceptionOrResult of
+      Left exception -> fetch (pure (Left exception))
+      Right result -> return result
+  where
+    chunkSize =
+      shiftL 2 12
+
 {-# INLINE list #-}
 list :: [input] -> Produce input
 list list =

@@ -13,6 +13,7 @@ import qualified Potoki.Transform as A
 import qualified Potoki.Produce as E
 import qualified Data.Attoparsec.ByteString.Char8 as B
 import qualified Data.ByteString as F
+import qualified Data.Vector as G
 
 
 main =
@@ -21,6 +22,10 @@ main =
   [
     testCase "list to list" $ do
       result <- C.produceAndConsume (E.list [1,2,3]) (D.list)
+      assertEqual "" [1,2,3] result
+    ,
+    testCase "vector to list" $ do
+      result <- C.produceAndConsume (E.vector (G.fromList [1,2,3])) (D.list)
       assertEqual "" [1,2,3] result
     ,
     testCase "just" $ do

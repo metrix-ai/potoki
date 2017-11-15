@@ -6,6 +6,7 @@ module Potoki.Produce
   A.hashMapRows,
   A.fileBytes,
   A.fileBytesAtOffset,
+  A.vector,
 )
 where
 

@@ -17,6 +17,7 @@ module Potoki.Transform
   C.deleteFile,
   C.appendBytesToFile,
   C.distinct,
+  C.builderChunks,
 )
 where
 
@@ -30,4 +31,4 @@ import qualified Potoki.Core.Fetch as D
 {-# INLINE consume #-}
 consume :: B.Consume input output -> C.Transform input output
 consume (B.Consume consume) =
-  C.consume consume
+  C.implode consume

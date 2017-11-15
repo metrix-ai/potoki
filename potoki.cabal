@@ -73,7 +73,7 @@ library
     Potoki.Prelude
   build-depends:
     -- 
-    potoki-core >=0.6.1 && <0.7,
+    potoki-core >=0.7 && <0.8,
     -- 
     attoparsec >=0.13 && <0.15,
     -- 

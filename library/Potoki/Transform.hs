@@ -138,26 +138,22 @@ parseText :: L.Parser parsed -> Transform Text (Either Text parsed)
 parseText parser =
   mapWithParseResult (L.parse parser)
 
-{-# INLINE executeFailingIO #-}
-executeFailingIO :: (a -> IO (Either error ())) -> Transform a error
-executeFailingIO io =
+{-# INLINE mapInIO #-}
+mapInIO :: (a -> IO b) -> Transform a b
+mapInIO io =
   Transform $ \ (A.Fetch fetch) ->
   return $ A.Fetch $ \ nil just ->
-  fix $ \ loop ->
-  join $ fetch (return nil) $ \ input ->
-  io input >>= \ case
-    Right () -> loop
-    Left exception -> return (just exception)
+  join $ fetch (return nil) $ (fmap . fmap) just io
 
 {-# INLINE deleteFile #-}
-deleteFile :: Transform FilePath IOException
+deleteFile :: Transform FilePath (Either IOException ())
 deleteFile =
-  executeFailingIO (try . I.removeFile)
+  mapInIO (try . I.removeFile)
 
 {-# INLINE appendBytesToFile #-}
-appendBytesToFile :: Transform (FilePath, ByteString) IOException
+appendBytesToFile :: Transform (FilePath, ByteString) (Either IOException ())
 appendBytesToFile =
-  executeFailingIO $ \ (path, bytes) ->
+  mapInIO $ \ (path, bytes) ->
   try $ 
   withFile path AppendMode $ \ handle -> 
   J.hPut handle bytes

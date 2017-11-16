@@ -1,6 +1,8 @@
 module Potoki.IO
 (
   produceAndConsume,
+  produce,
+  consume,
 )
 where
 

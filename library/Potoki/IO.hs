@@ -1,20 +1,8 @@
-module Potoki.IO where
+module Potoki.IO
+(
+  produceAndConsume,
+)
+where
 
-import Potoki.Prelude
-import qualified Potoki.Core.Produce as A
-import qualified Potoki.Core.Consume as B
-import qualified Potoki.Core.Transform as C
-import qualified Potoki.Core.Fetch as D
+import Potoki.Core.IO
 
-
-produceAndConsume :: A.Produce input -> B.Consume input output -> IO output
-produceAndConsume (A.Produce produce) (B.Consume consume) =
-  produce consume
-
-produce :: A.Produce input -> forall x. x -> (input -> x) -> IO x
-produce (A.Produce produce) end element =
-  produce (\ (D.Fetch fetch) -> fetch (return end) (return . element))
-
-consume :: (forall x. x -> (input -> x) -> IO x) -> B.Consume input output -> IO output
-consume fetch (B.Consume consume) =
-  consume (D.Fetch (\ stop emit -> join (fetch stop emit)))

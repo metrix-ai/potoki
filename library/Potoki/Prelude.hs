@@ -1,6 +1,7 @@
 module Potoki.Prelude
 ( 
   module Exports,
+  ioChunkSize,
 )
 where
 
@@ -43,3 +44,8 @@ import Data.Hashable as Exports (Hashable)
 -- bug
 -------------------------
 import Bug as Exports
+
+{-# NOINLINE ioChunkSize #-}
+ioChunkSize :: Int
+ioChunkSize =
+  shiftL 2 12

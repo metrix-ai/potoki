@@ -70,10 +70,11 @@ library
     Potoki.Consume
     Potoki.Transform
   other-modules:
+    Potoki.Fetch
     Potoki.Prelude
   build-depends:
     -- 
-    potoki-core >=0.7.1 && <0.8,
+    potoki-core >=1.1 && <1.2,
     -- 
     attoparsec >=0.13 && <0.15,
     -- 

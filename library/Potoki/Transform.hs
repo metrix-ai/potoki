@@ -1,34 +1,181 @@
 module Potoki.Transform
 (
-  C.Transform,
+  Transform,
+  -- * Potoki integration
   consume,
-  C.parseBytes,
-  C.parseText,
-  C.map,
-  C.mapFilter,
-  C.just,
-  C.take,
-  C.takeWhile,
-  C.takeWhileIsJust,
-  C.takeWhileIsLeft,
-  C.takeWhileIsRight,
-  C.bufferize,
-  C.executeIO,
-  C.deleteFile,
-  C.appendBytesToFile,
-  C.distinct,
-  C.builderChunks,
+  produce,
+  -- * Basics
+  take,
+  takeWhile,
+  mapFilter,
+  just,
+  distinct,
+  builderChunks,
+  -- * Parsing
+  parseBytes,
+  parseText,
+  -- * Concurrency
+  bufferize,
+  -- * File IO
+  executeIO,
+  deleteFile,
+  appendBytesToFile,
 )
 where
 
-import Potoki.Prelude
-import qualified Potoki.Core.Produce as A
-import qualified Potoki.Core.Consume as B
-import qualified Potoki.Core.Transform as C
-import qualified Potoki.Core.Fetch as D
+import Potoki.Prelude hiding (take, takeWhile)
+import Potoki.Core.Transform
+import qualified Potoki.Fetch as A
+import qualified Potoki.Core.Fetch as A
+import qualified Potoki.Core.IO as G
+import qualified Potoki.Core.Produce as H
+import qualified Data.Attoparsec.ByteString as K
+import qualified Data.Attoparsec.Text as L
+import qualified Data.Attoparsec.Types as M
+import qualified Data.HashSet as C
+import qualified Data.ByteString.Builder as E
+import qualified Data.ByteString.Lazy as F
+import qualified Data.ByteString as J
+import qualified System.Directory as I
+import qualified Control.Concurrent.Chan.Unagi.Bounded as B
 
 
-{-# INLINE consume #-}
-consume :: B.Consume input output -> C.Transform input output
-consume (B.Consume consume) =
-  C.implode consume
+{-# INLINE mapFilter #-}
+mapFilter :: (input -> Maybe output) -> Transform input output
+mapFilter mapping =
+  Transform (pure . A.mapFilter mapping)
+
+{-# INLINE just #-}
+just :: Transform (Maybe input) input
+just =
+  Transform (pure . A.just)
+
+{-# INLINE takeWhile #-}
+takeWhile :: (input -> Bool) -> Transform input input
+takeWhile predicate =
+  Transform (pure . A.takeWhile predicate)
+
+{-# INLINE bufferize #-}
+bufferize :: Int -> Transform element element
+bufferize size =
+  Transform $ \ (A.Fetch fetch) -> do
+    (inChan, outChan) <- B.newChan size
+    forkIO $ fix $ \ loop ->
+      join $ fetch
+        (B.writeChan inChan Nothing)
+        (\ !element -> B.writeChan inChan (Just element) >> loop)
+    return $ A.Fetch $ \ nil just -> fmap (maybe nil just) (B.readChan outChan)
+
+{-# INLINE mapWithParseResult #-}
+mapWithParseResult :: forall input parsed. (Monoid input, Eq input) => (input -> M.IResult input parsed) -> Transform input (Either Text parsed)
+mapWithParseResult inputToResult =
+  Transform $ \ inputFetch ->
+  do
+    unconsumedRef <- newIORef mempty
+    finishedRef <- newIORef False
+    return (A.Fetch (fetchParsed inputFetch finishedRef unconsumedRef))
+  where
+    fetchParsed :: A.Fetch input -> IORef Bool -> IORef input -> forall x. x -> (Either Text parsed -> x) -> IO x
+    fetchParsed (A.Fetch inputFetchIO) finishedRef unconsumedRef nil just =
+      do
+        finished <- readIORef finishedRef
+        if finished
+          then return nil
+          else do
+            unconsumed <- readIORef unconsumedRef
+            if unconsumed == mempty
+              then
+                join $ inputFetchIO
+                  (return nil)
+                  (\input -> do
+                    if input == mempty
+                      then return nil
+                      else matchResult (inputToResult input))
+              else do
+                writeIORef unconsumedRef mempty
+                matchResult (inputToResult unconsumed)
+      where
+        matchResult =
+          \case
+            M.Partial inputToResult ->
+              consume inputToResult
+            M.Done unconsumed parsed ->
+              do
+                writeIORef unconsumedRef unconsumed
+                return (just (Right parsed))
+            M.Fail unconsumed contexts message ->
+              do
+                writeIORef unconsumedRef unconsumed
+                writeIORef finishedRef True
+                return (just (Left resultMessage))
+              where
+                resultMessage =
+                  if null contexts
+                    then fromString message
+                    else fromString (showString (intercalate " > " contexts) (showString ": " message))
+        consume inputToResult =
+          join $ inputFetchIO
+            (do
+              writeIORef finishedRef True
+              matchResult (inputToResult mempty))
+            (\input -> do
+              when (input == mempty) (writeIORef finishedRef True)
+              matchResult (inputToResult input))
+
+{-|
+Lift an Attoparsec ByteString parser.
+-}
+{-# INLINE parseBytes #-}
+parseBytes :: K.Parser parsed -> Transform ByteString (Either Text parsed)
+parseBytes parser =
+  mapWithParseResult (K.parse parser)
+
+{-|
+Lift an Attoparsec Text parser.
+-}
+{-# INLINE parseText #-}
+parseText :: L.Parser parsed -> Transform Text (Either Text parsed)
+parseText parser =
+  mapWithParseResult (L.parse parser)
+
+{-# INLINE executeFailingIO #-}
+executeFailingIO :: (a -> IO (Either error ())) -> Transform a error
+executeFailingIO io =
+  Transform $ \ (A.Fetch fetch) ->
+  return $ A.Fetch $ \ nil just ->
+  fix $ \ loop ->
+  join $ fetch (return nil) $ \ input ->
+  io input >>= \ case
+    Right () -> loop
+    Left exception -> return (just exception)
+
+{-# INLINE deleteFile #-}
+deleteFile :: Transform FilePath IOException
+deleteFile =
+  executeFailingIO (try . I.removeFile)
+
+{-# INLINE appendBytesToFile #-}
+appendBytesToFile :: Transform (FilePath, ByteString) IOException
+appendBytesToFile =
+  executeFailingIO $ \ (path, bytes) ->
+  try $ 
+  withFile path AppendMode $ \ handle -> 
+  J.hPut handle bytes
+
+{-# INLINE distinct #-}
+distinct :: (Eq element, Hashable element) => Transform element element
+distinct =
+  Transform $ \ (A.Fetch fetch) -> do
+    stateRef <- newIORef mempty
+    return $ A.Fetch $ \ nil just -> fix $ \ loop -> join $ fetch (return nil) $ \ !input -> do
+      !set <- readIORef stateRef
+      if C.member input set
+        then loop
+        else do
+          writeIORef stateRef $! C.insert input set
+          return (just input)
+
+{-# INLINE builderChunks #-}
+builderChunks :: Transform E.Builder ByteString
+builderChunks =
+  produce (H.list . F.toChunks . E.toLazyByteString)

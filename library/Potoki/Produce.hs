@@ -1,23 +1,89 @@
 module Potoki.Produce
 (
-  A.Produce,
+  Produce,
   transform,
-  A.list,
-  A.hashMapRows,
-  A.fileBytes,
-  A.fileBytesAtOffset,
-  A.vector,
+  list,
+  vector,
+  hashMapRows,
+  fileBytes,
+  fileBytesAtOffset,
 )
 where
 
 import Potoki.Prelude
-import qualified Potoki.Core.Produce as A
-import qualified Potoki.Core.Consume as B
-import qualified Potoki.Core.Transform as C
-import qualified Potoki.Core.Fetch as D
+import Potoki.Core.Produce
+import qualified Potoki.Fetch as A
+import qualified Potoki.Core.Fetch as A
+import qualified Potoki.Core.Consume as E
+import qualified Potoki.Core.Transform as F
+import qualified Data.Attoparsec.Types as I
+import qualified Data.Attoparsec.ByteString as K
+import qualified Data.Attoparsec.Text as L
+import qualified Data.HashMap.Strict as B
+import qualified Data.ByteString as D
+import qualified Data.Vector as C
 
 
 {-# INLINE transform #-}
-transform :: C.Transform input output -> A.Produce input -> A.Produce output
-transform (C.Transform transform) (A.Produce fetch) =
-  A.Produce (\send -> fetch (\fetcher -> transform fetcher >>= send))
+transform :: F.Transform input output -> Produce input -> Produce output
+transform (F.Transform transformIO) (Produce produceIO) =
+  Produce $ do
+    (fetch, kill) <- produceIO
+    newFetch <- transformIO fetch
+    return (newFetch, kill)
+
+{-# INLINE vector #-}
+vector :: Vector input -> Produce input
+vector vector =
+  Produce $ do
+    indexRef <- newIORef 0
+    let
+      fetch =
+        A.Fetch $ \ nil just -> do
+          index <- readIORef indexRef
+          writeIORef indexRef $! succ index
+          return $ case (C.!?) vector index of
+            Just !input -> just input
+            Nothing -> nil
+      in return (fetch, return ())
+
+{-# INLINE hashMapRows #-}
+hashMapRows :: HashMap a b -> Produce (a, b)
+hashMapRows =
+  list . B.toList
+
+{-|
+Read from a file by path.
+
+* Exception-free
+* Automatic resource management
+-}
+{-# INLINABLE fileBytes #-}
+fileBytes :: FilePath -> Produce (Either IOException ByteString)
+fileBytes path =
+  Produce $ do
+    handleOpened <- try (openBinaryFile path ReadMode)
+    case handleOpened of
+      Right handle ->
+        return (A.handleBytes handle ioChunkSize, catchIOError (hClose handle) (const (return ())))
+      Left exception ->
+        return (pure (Left exception), return ())
+
+{-|
+Read from a file by path.
+
+* Exception-free
+* Automatic resource management
+-}
+{-# INLINABLE fileBytesAtOffset #-}
+fileBytesAtOffset :: FilePath -> Int -> Produce (Either IOException ByteString)
+fileBytesAtOffset path offset =
+  Produce (catchIOError success failure)
+  where
+    success =
+      do
+        handle <- openBinaryFile path ReadMode
+        hSeek handle AbsoluteSeek (fromIntegral offset)
+        return (A.handleBytes handle ioChunkSize, catchIOError (hClose handle) (const (return ())))
+    failure exception =
+      return (pure (Left exception), return ())

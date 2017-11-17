@@ -13,7 +13,9 @@ module Potoki.Consume
   writeBytesToFile,
   appendBytesToFile,
   deleteFiles,
-  print,
+  printBytes,
+  printText,
+  printString,
   parseBytes,
   parseText,
 )
@@ -77,15 +79,20 @@ processInIO :: (element -> IO ()) -> Consume element ()
 processInIO process =
   Consume (\ fetch -> L.fetchAndHandleAll fetch process)
 
+{-# INLINABLE printBytes #-}
+printBytes :: Consume ByteString ()
+printBytes =
+  processInIO C.putStr
+
 {-# INLINABLE printText #-}
 printText :: Consume Text ()
 printText =
-  processInIO K.putStrLn
+  processInIO K.putStr
 
 {-# INLINABLE printString #-}
 printString :: Consume String ()
 printString =
-  processInIO putStrLn
+  processInIO putStr
 
 {-|
 Overwrite a file.

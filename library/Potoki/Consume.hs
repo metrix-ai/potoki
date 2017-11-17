@@ -75,24 +75,24 @@ concat =
       join (fetchIO (pure acc) (\ x -> build fetchIO (mappend acc x)))
 
 {-# INLINABLE processInIO #-}
-processInIO :: (element -> IO ()) -> Consume element ()
-processInIO process =
-  Consume (\ fetch -> L.fetchAndHandleAll fetch process)
+processInIO :: IO () -> (element -> IO ()) -> Consume element ()
+processInIO stop process =
+  Consume (\ fetch -> L.fetchAndHandleAll fetch stop process)
 
 {-# INLINABLE printBytes #-}
 printBytes :: Consume ByteString ()
 printBytes =
-  processInIO C.putStr
+  processInIO (putChar '\n') C.putStr
 
 {-# INLINABLE printText #-}
 printText :: Consume Text ()
 printText =
-  processInIO K.putStr
+  processInIO (putChar '\n') K.putStr
 
 {-# INLINABLE printString #-}
 printString :: Consume String ()
 printString =
-  processInIO putStr
+  processInIO (putChar '\n') putStr
 
 {-|
 Overwrite a file.
@@ -105,7 +105,7 @@ writeBytesToFile :: FilePath -> Consume ByteString (Either IOException ())
 writeBytesToFile path =
   Consume $ \ fetch ->
   try $ withFile path WriteMode $ \ handle ->
-  L.fetchAndHandleAll fetch $ \ bytes -> 
+  L.fetchAndHandleAll fetch (return ()) $ \ bytes -> 
   C.hPut handle bytes
 
 {-|
@@ -119,14 +119,14 @@ appendBytesToFile :: FilePath -> Consume ByteString (Either IOException ())
 appendBytesToFile path =
   Consume $ \ fetch ->
   try $ withFile path AppendMode $ \ handle ->
-  L.fetchAndHandleAll fetch $ \ bytes -> 
+  L.fetchAndHandleAll fetch (return ()) $ \ bytes -> 
   C.hPut handle bytes
 
 {-# INLINABLE deleteFiles #-}
 deleteFiles :: Consume FilePath (Either IOException ())
 deleteFiles =
   Consume $ \ fetch ->
-  try $ L.fetchAndHandleAll fetch G.removeFile
+  try $ L.fetchAndHandleAll fetch (return ()) G.removeFile
 
 {-# INLINABLE fold #-}
 fold :: D.Fold input output -> Consume input output

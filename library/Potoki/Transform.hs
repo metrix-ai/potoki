@@ -5,6 +5,7 @@ module Potoki.Transform
   consume,
   produce,
   -- * Basics
+  ioTransform,
   take,
   takeWhile,
   mapFilter,
@@ -211,3 +212,10 @@ distinct =
 builderChunks :: Transform E.Builder ByteString
 builderChunks =
   produce (H.list . F.toChunks . E.toLazyByteString)
+
+{-# INLINE ioTransform #-}
+ioTransform :: IO (Transform a b) -> Transform a b
+ioTransform io =
+  Transform $ \ fetch -> do
+    Transform transformIO <- io
+    transformIO fetch

@@ -16,6 +16,7 @@ module Potoki.Transform
   parseText,
   -- * Concurrency
   bufferize,
+  concurrently,
   -- * File IO
   executeIO,
   deleteFile,
@@ -65,6 +66,41 @@ bufferize size =
         (B.writeChan inChan Nothing)
         (\ !element -> B.writeChan inChan (Just element) >> loop)
     return $ A.Fetch $ \ nil just -> fmap (maybe nil just) (B.readChan outChan)
+
+{-|
+Execute the transform on the specified amount of threads.
+The order of the outputs produced is indiscriminate.
+-}
+{-# INLINABLE concurrently #-}
+concurrently :: Int -> Transform input output -> Transform input output
+concurrently workersAmount transform =
+  bufferize workersAmount >>>
+  concurrentlyUnsafe workersAmount transform
+
+{-# INLINE concurrentlyUnsafe #-}
+concurrentlyUnsafe :: Int -> Transform input output -> Transform input output
+concurrentlyUnsafe workersAmount (Transform syncTransformIO) =
+  Transform $ \ fetch -> do
+    outChan <- newEmptyMVar
+    replicateM_ workersAmount $ forkIO $ do
+      A.Fetch fetchIO <- syncTransformIO fetch
+      fix $ \ loop -> join $ fetchIO
+        (putMVar outChan Nothing)
+        (\ !result -> putMVar outChan (Just result) >> loop)
+    activeWorkersAmountVar <- newMVar workersAmount
+    return $ A.Fetch $ \ nil just -> do
+      activeWorkersAmount <- takeMVar activeWorkersAmountVar
+      if activeWorkersAmount <= 0
+        then return nil
+        else do
+          fetchResult <- takeMVar outChan
+          case fetchResult of
+            Just result -> do
+              putMVar activeWorkersAmountVar activeWorkersAmount
+              return (just result)
+            Nothing -> do
+              putMVar activeWorkersAmountVar (pred activeWorkersAmount)
+              return nil
 
 {-# INLINE mapWithParseResult #-}
 mapWithParseResult :: forall input parsed. (Monoid input, Eq input) => (input -> M.IResult input parsed) -> Transform input (Either Text parsed)

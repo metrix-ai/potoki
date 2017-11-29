@@ -69,13 +69,37 @@ bufferize size =
     return $ A.Fetch $ \ nil just -> fmap (maybe nil just) (B.readChan outChan)
 
 {-|
+Identity Transform, which ensures that the inputs are fetched synchronously.
+
+Useful for concurrent transforms.
+-}
+{-# INLINABLE sync #-}
+sync :: Transform a a
+sync =
+  Transform $ \ (A.Fetch fetch) -> do
+    activeVar <- newMVar True
+    return $ A.Fetch $ \ nil just -> do
+      active <- takeMVar activeVar
+      if active
+        then join $ fetch
+          (do
+            putMVar activeVar False
+            return nil)
+          (\ !element -> do
+            putMVar activeVar True
+            return (just element))
+        else do
+          putMVar activeVar False
+          return nil
+
+{-|
 Execute the transform on the specified amount of threads.
 The order of the outputs produced is indiscriminate.
 -}
 {-# INLINABLE concurrently #-}
 concurrently :: Int -> Transform input output -> Transform input output
 concurrently workersAmount transform =
-  bufferize workersAmount >>>
+  sync >>>
   concurrentlyUnsafe workersAmount transform
 
 {-# INLINE concurrentlyUnsafe #-}
@@ -89,7 +113,7 @@ concurrentlyUnsafe workersAmount (Transform syncTransformIO) =
         (putMVar outChan Nothing)
         (\ !result -> putMVar outChan (Just result) >> loop)
     activeWorkersAmountVar <- newMVar workersAmount
-    return $ A.Fetch $ \ nil just -> do
+    return $ A.Fetch $ \ nil just -> fix $ \ loop -> do
       activeWorkersAmount <- takeMVar activeWorkersAmountVar
       if activeWorkersAmount <= 0
         then return nil
@@ -101,7 +125,7 @@ concurrentlyUnsafe workersAmount (Transform syncTransformIO) =
               return (just result)
             Nothing -> do
               putMVar activeWorkersAmountVar (pred activeWorkersAmount)
-              return nil
+              loop
 
 {-# INLINE mapWithParseResult #-}
 mapWithParseResult :: forall input parsed. (Monoid input, Eq input) => (input -> M.IResult input parsed) -> Transform input (Either Text parsed)

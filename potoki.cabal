@@ -108,6 +108,7 @@ test-suite tests
     -- 
     potoki,
     attoparsec,
+    random >=1.1 && <2,
     -- testing:
     tasty >=0.12 && <0.13,
     tasty-quickcheck >=0.9 && <0.10,

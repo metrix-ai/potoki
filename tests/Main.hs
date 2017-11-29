@@ -14,6 +14,7 @@ import qualified Potoki.Produce as E
 import qualified Data.Attoparsec.ByteString.Char8 as B
 import qualified Data.ByteString as F
 import qualified Data.Vector as G
+import qualified System.Random as H
 
 
 main =
@@ -72,6 +73,20 @@ transform =
         list = [1,2,3,2,3,2,1,4,1] :: [Int]
       result <- C.produceAndConsume (E.list list) (D.transform A.distinct D.list)
       assertEqual "" [1,2,3,4] result
+    ,
+    testCase "Concurrently" $ do
+      let
+        list = [1..20000]
+        produce = E.list list
+        transform =
+          A.concurrently 12 $
+          arr (\ x -> H.randomRIO (0, 100) >>= threadDelay >> return x) >>>
+          A.executeIO
+        consume = D.transform transform D.list
+      result <- C.produceAndConsume produce consume
+      assertBool "Is dispersed" (list /= result)
+      assertEqual "Contains no duplicates" 0 (length result - length (nub result))
+      assertEqual "Equals the original once sorted" list (sort result)
   ]
 
 parsing :: TestTree

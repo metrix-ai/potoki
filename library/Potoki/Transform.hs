@@ -12,6 +12,8 @@ module Potoki.Transform
   just,
   distinct,
   builderChunks,
+  executeIO,
+  mapInIO,
   -- * Parsing
   parseBytes,
   parseText,
@@ -19,7 +21,6 @@ module Potoki.Transform
   bufferize,
   concurrently,
   -- * File IO
-  executeIO,
   deleteFile,
   appendBytesToFile,
 )

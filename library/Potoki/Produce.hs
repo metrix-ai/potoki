@@ -7,6 +7,8 @@ module Potoki.Produce
   hashMapRows,
   fileBytes,
   fileBytesAtOffset,
+  finiteMVar,
+  infiniteMVar,
 )
 where
 
@@ -87,3 +89,21 @@ fileBytesAtOffset path offset =
         return (A.handleBytes handle ioChunkSize, catchIOError (hClose handle) (const (return ())))
     failure exception =
       return (pure (Left exception), return ())
+
+{-|
+Read from MVar.
+Nothing gets interpreted as the end of input.
+-}
+{-# INLINE finiteMVar #-}
+finiteMVar :: MVar (Maybe element) -> Produce element
+finiteMVar var =
+  Produce (return (A.finiteMVar var, return ()))
+
+{-|
+Read from MVar.
+Never stops.
+-}
+{-# INLINE infiniteMVar #-}
+infiniteMVar :: MVar element -> Produce element
+infiniteMVar var =
+  Produce (return (A.infiniteMVar var, return ()))

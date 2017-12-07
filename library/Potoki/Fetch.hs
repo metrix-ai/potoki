@@ -47,3 +47,15 @@ takeWhile predicate (Fetch fetchIO) =
   if predicate input
     then just input
     else nil
+
+{-# INLINABLE infiniteMVar #-}
+infiniteMVar :: MVar element -> Fetch element
+infiniteMVar var =
+  Fetch $ \ nil just ->
+  fmap just (takeMVar var)
+
+{-# INLINABLE finiteMVar #-}
+finiteMVar :: MVar (Maybe element) -> Fetch element
+finiteMVar var =
+  Fetch $ \ nil just ->
+  fmap (maybe nil just) (takeMVar var)

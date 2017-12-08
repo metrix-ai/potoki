@@ -7,6 +7,7 @@ module Potoki.Produce
   hashMapRows,
   fileBytes,
   fileBytesAtOffset,
+  directoryContents,
   finiteMVar,
   infiniteMVar,
 )
@@ -24,6 +25,7 @@ import qualified Data.Attoparsec.Text as L
 import qualified Data.HashMap.Strict as B
 import qualified Data.ByteString as D
 import qualified Data.Vector as C
+import qualified System.Directory as G
 
 
 {-# INLINE transform #-}
@@ -87,6 +89,19 @@ fileBytesAtOffset path offset =
         handle <- openBinaryFile path ReadMode
         hSeek handle AbsoluteSeek (fromIntegral offset)
         return (A.handleBytes handle ioChunkSize, catchIOError (hClose handle) (const (return ())))
+    failure exception =
+      return (pure (Left exception), return ())
+
+{-# INLINABLE directoryContents #-}
+directoryContents :: FilePath -> Produce (Either IOException FilePath)
+directoryContents path =
+  Produce (catchIOError success failure)
+  where
+    success =
+      do
+        subPaths <- G.listDirectory path
+        ref <- newIORef (map Right subPaths)
+        return (A.list ref, return ())
     failure exception =
       return (pure (Left exception), return ())
 

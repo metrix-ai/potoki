@@ -2,6 +2,7 @@ module Potoki.Prelude
 ( 
   module Exports,
   ioChunkSize,
+  textString,
 )
 where
 
@@ -45,7 +46,15 @@ import Data.Hashable as Exports (Hashable)
 -------------------------
 import Bug as Exports
 
+--------------------------------------------------------------------------------
+
+import qualified Data.Text as A
+
 {-# NOINLINE ioChunkSize #-}
 ioChunkSize :: Int
 ioChunkSize =
   shiftL 2 12
+
+textString :: Text -> String
+textString =
+  A.unpack

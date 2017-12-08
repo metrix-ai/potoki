@@ -101,7 +101,7 @@ directoryContents path =
     success =
       do
         subPaths <- G.listDirectory path
-        ref <- newIORef (map Right subPaths)
+        ref <- newIORef (map (Right . mappend path . (:) '/') subPaths)
         return (A.list ref, return ())
     failure exception =
       return (pure (Left exception), return ())

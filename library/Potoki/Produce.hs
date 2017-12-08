@@ -119,7 +119,7 @@ fileText path =
   where
     success =
       do
-        handle <- openBinaryFile path ReadMode
+        handle <- openFile path ReadMode
         return (A.handleText handle, catchIOError (hClose handle) (const (return ())))
     failure exception =
       return (pure (Left exception), return ())

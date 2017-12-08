@@ -9,16 +9,27 @@ import qualified Data.Attoparsec.Text as L
 import qualified Data.HashMap.Strict as B
 import qualified Data.Vector as C
 import qualified Data.ByteString as D
+import qualified Data.Text as A
+import qualified Data.Text.IO as A
 
 
 {-# INLINABLE handleBytes #-}
 handleBytes :: Handle -> Int -> Fetch (Either IOException ByteString)
 handleBytes handle chunkSize =
   Fetch $ \ nil just -> do
-    element <- try (D.hGetSome handle chunkSize)
-    case element of
+    chunk <- try (D.hGetSome handle chunkSize)
+    case chunk of
       Right "" -> return nil
-      _ -> return (just element)
+      _ -> return (just chunk)
+
+{-# INLINABLE handleText #-}
+handleText :: Handle -> Fetch (Either IOException Text)
+handleText handle =
+  Fetch $ \ nil just -> do
+    chunk <- try (A.hGetChunk handle)
+    case chunk of
+      Right "" -> return nil
+      _ -> return (just chunk)
 
 {-# INLINABLE mapFilter #-}
 mapFilter :: (input -> Maybe output) -> Fetch input -> Fetch output

@@ -7,6 +7,7 @@ module Potoki.Produce
   hashMapRows,
   fileBytes,
   fileBytesAtOffset,
+  fileText,
   directoryContents,
   finiteMVar,
   infiniteMVar,
@@ -102,6 +103,24 @@ directoryContents path =
         subPaths <- G.listDirectory path
         ref <- newIORef (map Right subPaths)
         return (A.list ref, return ())
+    failure exception =
+      return (pure (Left exception), return ())
+
+{-|
+Read from a file by path.
+
+* Exception-free
+* Automatic resource management
+-}
+{-# INLINABLE fileText #-}
+fileText :: FilePath -> Produce (Either IOException Text)
+fileText path =
+  Produce (catchIOError success failure)
+  where
+    success =
+      do
+        handle <- openBinaryFile path ReadMode
+        return (A.handleText handle, catchIOError (hClose handle) (const (return ())))
     failure exception =
       return (pure (Left exception), return ())
 

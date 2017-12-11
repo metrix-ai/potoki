@@ -65,33 +65,28 @@ library
   default-language:
     Haskell2010
   exposed-modules:
+    Potoki.Consume
     Potoki.IO
     Potoki.Produce
-    Potoki.Consume
     Potoki.Transform
   other-modules:
     Potoki.Fetch
     Potoki.Prelude
   build-depends:
-    -- 
-    potoki-core >=1.2 && <1.3,
-    -- 
     attoparsec >=0.13 && <0.15,
-    -- 
-    text >=1 && <2,
-    bytestring ==0.10.*,
-    vector >=0.12 && <0.13,
-    hashable >=1 && <2,
-    -- 
-    unagi-chan >=0.4 && <0.5,
-    -- 
-    directory >=1.3 && <2,
-    unordered-containers >=0.2 && <0.3,
-    foldl >=1.3 && <2,
-    profunctors >=5.2 && <6,
+    base >=4.7 && <5,
     base-prelude <2,
     bug >=1 && <2,
-    base >=4.7 && <5
+    bytestring ==0.10.*,
+    directory >=1.3 && <2,
+    foldl >=1.3 && <2,
+    hashable >=1 && <2,
+    potoki-core >=1.2 && <1.3,
+    profunctors >=5.2 && <6,
+    text >=1 && <2,
+    unagi-chan >=0.4 && <0.5,
+    unordered-containers >=0.2 && <0.3,
+    vector >=0.12 && <0.13
 
 test-suite tests
   type:
@@ -105,15 +100,12 @@ test-suite tests
   default-language:
     Haskell2010
   build-depends:
-    -- 
-    potoki,
     attoparsec,
-    random >=1.1 && <2,
-    -- testing:
-    tasty >=0.12 && <0.13,
-    tasty-quickcheck >=0.9 && <0.10,
-    tasty-hunit >=0.9 && <0.11,
-    quickcheck-instances >=0.3.11 && <0.4,
+    potoki,
     QuickCheck >=2.8.1 && <3,
-    --
-    rerebase >=1.1 && <2
+    quickcheck-instances >=0.3.11 && <0.4,
+    random >=1.1 && <2,
+    rerebase >=1.1 && <2,
+    tasty >=0.12 && <0.13,
+    tasty-hunit >=0.9 && <0.11,
+    tasty-quickcheck >=0.9 && <0.10

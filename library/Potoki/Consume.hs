@@ -105,8 +105,9 @@ writeBytesToFile :: FilePath -> Consume ByteString (Either IOException ())
 writeBytesToFile path =
   Consume $ \ fetch ->
   try $ withFile path WriteMode $ \ handle ->
-  L.fetchAndHandleAll fetch (return ()) $ \ bytes -> 
-  C.hPut handle bytes
+  do
+    hSetBuffering handle NoBuffering
+    L.fetchAndHandleAll fetch (return ()) (C.hPut handle)
 
 {-|
 Append to a file.
@@ -119,8 +120,9 @@ appendBytesToFile :: FilePath -> Consume ByteString (Either IOException ())
 appendBytesToFile path =
   Consume $ \ fetch ->
   try $ withFile path AppendMode $ \ handle ->
-  L.fetchAndHandleAll fetch (return ()) $ \ bytes -> 
-  C.hPut handle bytes
+  do
+    hSetBuffering handle NoBuffering
+    L.fetchAndHandleAll fetch (return ()) (C.hPut handle)
 
 {-# INLINABLE deleteFiles #-}
 deleteFiles :: Consume FilePath (Either IOException ())

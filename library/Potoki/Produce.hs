@@ -93,6 +93,9 @@ fileBytesAtOffset path offset =
     failure exception =
       return (pure (Left exception), return ())
 
+{-|
+Sorted subpaths of the directory.
+-}
 {-# INLINABLE directoryContents #-}
 directoryContents :: FilePath -> Produce (Either IOException FilePath)
 directoryContents path =
@@ -101,7 +104,7 @@ directoryContents path =
     success =
       do
         subPaths <- G.listDirectory path
-        ref <- newIORef (map (Right . mappend path . (:) '/') subPaths)
+        ref <- newIORef (map (Right . mappend path . (:) '/') (sort subPaths))
         return (A.list ref, return ())
     failure exception =
       return (pure (Left exception), return ())

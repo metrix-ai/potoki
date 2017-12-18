@@ -9,6 +9,7 @@ module Potoki.Transform
   take,
   takeWhile,
   mapFilter,
+  filter,
   just,
   distinct,
   builderChunks,
@@ -26,7 +27,7 @@ module Potoki.Transform
 )
 where
 
-import Potoki.Prelude hiding (take, takeWhile)
+import Potoki.Prelude hiding (take, takeWhile, filter)
 import Potoki.Core.Transform
 import qualified Potoki.Fetch as A
 import qualified Potoki.Core.Fetch as A
@@ -47,6 +48,11 @@ import qualified Control.Concurrent.Chan.Unagi.Bounded as B
 mapFilter :: (input -> Maybe output) -> Transform input output
 mapFilter mapping =
   Transform (pure . A.mapFilter mapping)
+
+{-# INLINE filter #-}
+filter :: (input -> Bool) -> Transform input input
+filter predicate =
+  Transform (pure . A.filter predicate)
 
 {-# INLINE just #-}
 just :: Transform (Maybe input) input

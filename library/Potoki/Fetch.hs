@@ -41,6 +41,16 @@ mapFilter mapping (Fetch fetchIO) =
     Just output -> return (just output)
     Nothing -> loop
 
+{-# INLINABLE filter #-}
+filter :: (input -> Bool) -> Fetch input -> Fetch input
+filter predicate (Fetch fetchIO) =
+  Fetch $ \ nil just ->
+  fix $ \ loop ->
+  join $ fetchIO (return nil) $ \ input ->
+  if predicate input
+    then return (just input)
+    else loop
+
 {-# INLINABLE just #-}
 just :: Fetch (Maybe element) -> Fetch element
 just (Fetch fetchIO) =

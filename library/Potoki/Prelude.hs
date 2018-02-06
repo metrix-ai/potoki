@@ -42,10 +42,6 @@ import Data.Vector as Exports (Vector)
 -------------------------
 import Data.Hashable as Exports (Hashable)
 
--- bug
--------------------------
-import Bug as Exports
-
 --------------------------------------------------------------------------------
 
 import qualified Data.Text as A

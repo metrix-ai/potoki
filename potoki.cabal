@@ -72,6 +72,7 @@ library
   other-modules:
     Potoki.Fetch
     Potoki.Prelude
+    Potoki.Transform.Concurrency
   build-depends:
     attoparsec >=0.13 && <0.15,
     base >=4.7 && <5,

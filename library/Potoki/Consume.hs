@@ -18,6 +18,7 @@ module Potoki.Consume
   printString,
   parseBytes,
   parseText,
+  concurrently,
 )
 where
 
@@ -34,6 +35,7 @@ import qualified Data.Attoparsec.Types as I
 import qualified Data.Text.IO as K
 import qualified Control.Foldl as D
 import qualified System.Directory as G
+import qualified Potoki.Transform.Concurrency as B
 
 
 {-# INLINABLE transform #-}
@@ -177,3 +179,11 @@ parseBytes =
 parseText :: F.Parser output -> Consume Text (Either Text output)
 parseText =
   runParseResult . F.parse
+
+{-|
+Execute a Consume concurrently and consume its results.
+-}
+{-# INLINABLE concurrently #-}
+concurrently :: Int -> Consume a b -> Consume b c -> Consume a c
+concurrently amount consume1 consume2 =
+  transform (B.concurrently amount (J.consume consume1)) consume2

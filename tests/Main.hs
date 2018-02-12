@@ -74,6 +74,12 @@ transform =
       result <- C.produceAndConsume (E.list list) (D.transform A.distinct D.list)
       assertEqual "" [1,2,3,4] result
     ,
+    testCase "Distinct By" $ do
+      let
+        list = [(1, ""),(2, ""),(3, ""),(2, ""),(3, ""),(2, ""),(1, ""),(4, ""),(1, "")] :: [(Int, String)]
+      result <- C.produceAndConsume (E.list list) (D.transform (A.distinctBy fst) D.list)
+      assertEqual "" [(1, ""),(2, ""),(3, ""),(4, "")] result
+    ,
     testCase "Concurrently" $ do
       let
         list = [1..20000]

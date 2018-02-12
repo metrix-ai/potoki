@@ -11,6 +11,7 @@ module Potoki.Transform
   mapFilter,
   filter,
   just,
+  distinctBy,
   distinct,
   builderChunks,
   executeIO,
@@ -157,18 +158,23 @@ appendBytesToFile =
   withFile path AppendMode $ \ handle -> 
   J.hPut handle bytes
 
-{-# INLINE distinct #-}
-distinct :: (Eq element, Hashable element) => Transform element element
-distinct =
+{-# INLINE distinctBy #-}
+distinctBy :: (Eq comparable, Hashable comparable) => (element -> comparable) -> Transform element element
+distinctBy f =
   Transform $ \ (A.Fetch fetch) -> do
     stateRef <- newIORef mempty
     return $ A.Fetch $ \ nil just -> fix $ \ loop -> join $ fetch (return nil) $ \ !input -> do
+      let comparable = f input
       !set <- readIORef stateRef
-      if C.member input set
+      if C.member comparable set
         then loop
         else do
-          writeIORef stateRef $! C.insert input set
+          writeIORef stateRef $! C.insert comparable set
           return (just input)
+
+{-# INLINE distinct #-}
+distinct :: (Eq element, Hashable element) => Transform element element
+distinct = distinctBy id
 
 {-# INLINE builderChunks #-}
 builderChunks :: Transform E.Builder ByteString

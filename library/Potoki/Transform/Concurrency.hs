@@ -2,6 +2,7 @@ module Potoki.Transform.Concurrency
 (
   bufferize,
   concurrently,
+  async,
 )
 where
 
@@ -81,3 +82,15 @@ concurrentlyUnsafe workersAmount (Transform syncTransformIO) =
             Nothing -> do
               putMVar activeWorkersAmountVar (pred activeWorkersAmount)
               loop
+
+{-|
+A transform, which fetches the inputs asynchronously on the specified number of threads.
+-}
+async :: Int -> Transform input input
+async workersAmount =
+  Transform $ \ (A.Fetch fetchIO) -> do
+    chan <- newEmptyMVar 
+    replicateM_ workersAmount $ forkIO $ fix $ \ loop -> do
+      fetchResult <- fetchIO Nothing Just
+      putMVar chan fetchResult
+    return (A.finiteMVar chan)

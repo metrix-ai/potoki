@@ -29,14 +29,6 @@ import qualified Data.Vector as C
 import qualified System.Directory as G
 
 
-{-# INLINE transform #-}
-transform :: F.Transform input output -> Produce input -> Produce output
-transform (F.Transform transformIO) (Produce produceIO) =
-  Produce $ do
-    (fetch, kill) <- produceIO
-    newFetch <- transformIO fetch
-    return (newFetch, kill)
-
 {-# INLINE vector #-}
 vector :: Vector input -> Produce input
 vector vector =

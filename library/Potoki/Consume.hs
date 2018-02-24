@@ -38,11 +38,6 @@ import qualified System.Directory as G
 import qualified Potoki.Transform.Concurrency as B
 
 
-{-# INLINABLE transform #-}
-transform :: J.Transform input output -> Consume output sinkOutput -> Consume input sinkOutput
-transform (J.Transform transform) (Consume sink) =
-  Consume (transform >=> sink)
-
 {-# INLINABLE head #-}
 head :: Consume input (Maybe input)
 head =

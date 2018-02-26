@@ -30,6 +30,9 @@ description:
   Also, in difference to \"io-streams\", \"potoki\" doesn't use exceptions for control-flow.
   In fact, \"potoki\" doesn't use exceptions whatsoever,
   instead it makes failures explicit, using the standard @Either@ type.
+  .
+  \"potoki\" comes with automated resource-management (acquisition and clean-up),
+  concurrency and buffering features.
 category:
   Streaming
 homepage:

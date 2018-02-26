@@ -36,15 +36,15 @@ description:
 category:
   Streaming
 homepage:
-  https://github.com/nikita-volkov/potoki 
+  https://github.com/metrix-ai/potoki 
 bug-reports:
-  https://github.com/nikita-volkov/potoki/issues 
+  https://github.com/metrix-ai/potoki/issues 
 author:
   Nikita Volkov <nikita.y.volkov@mail.ru>
 maintainer:
-  Nikita Volkov <nikita.y.volkov@mail.ru>
+  Metrix.AI Tech Team <tech@metrix.ai>
 copyright:
-  (c) 2017, Nikita Volkov
+  (c) 2017, Metrix.AI
 license:
   MIT
 license-file:
@@ -58,7 +58,7 @@ source-repository head
   type:
     git
   location:
-    git://github.com/nikita-volkov/potoki.git
+    git://github.com/metrix-ai/potoki.git
 
 library
   hs-source-dirs:

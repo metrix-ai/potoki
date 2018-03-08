@@ -16,6 +16,7 @@ module Potoki.Transform
   builderChunks,
   executeIO,
   mapInIO,
+  state,
   -- * Parsing
   parseBytes,
   parseText,
@@ -44,6 +45,7 @@ import qualified Data.ByteString.Lazy as F
 import qualified Data.ByteString as J
 import qualified System.Directory as I
 import qualified Control.Concurrent.Chan.Unagi.Bounded as B
+import qualified Control.Monad.Trans.State.Strict as O
 import qualified Potoki.Transform.Concurrency as N
 
 
@@ -188,3 +190,34 @@ ioTransform io =
   Transform $ \ fetch -> do
     Transform transformIO <- io
     transformIO fetch
+
+{-# INLINE state #-}
+state :: (a -> O.State s [b]) -> s -> Transform a b
+state stateFn initialState =
+  Transform $ \ (A.Fetch fetchIO) -> do
+    stateRef <- newIORef initialState
+    bufferRef <- newIORef []
+    return $ A.Fetch $ \ nil just -> do
+      buffer <- readIORef bufferRef
+      case buffer of
+        head : tail -> do
+          writeIORef bufferRef tail
+          return (just head)
+        _ ->
+          let
+            nilCase =
+              return nil
+            justCase input =
+              do
+                currentState <- readIORef stateRef
+                case O.runState (stateFn input) currentState of
+                  (outputList, newState) -> case outputList of
+                    head : tail -> do
+                      writeIORef bufferRef tail
+                      writeIORef stateRef newState
+                      return (just head)
+                    _ -> do
+                      writeIORef bufferRef []
+                      writeIORef stateRef newState
+                      return nil
+            in join (fetchIO nilCase justCase)

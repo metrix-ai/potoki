@@ -11,6 +11,7 @@ module Potoki.Transform
   mapFilter,
   filter,
   just,
+  list,
   distinctBy,
   distinct,
   builderChunks,
@@ -191,11 +192,33 @@ ioTransform io =
     Transform transformIO <- io
     transformIO fetch
 
+{-|
+Notice that you can control the emission of output of each step
+by producing a list of outputs and then composing the transform with
+the "list" transform.
+-}
 {-# INLINE state #-}
-state :: (a -> O.State s [b]) -> s -> Transform a b
+state :: (a -> O.State s b) -> s -> Transform a b
 state stateFn initialState =
   Transform $ \ (A.Fetch fetchIO) -> do
     stateRef <- newIORef initialState
+    return $ A.Fetch $ \ nil just -> do
+      let
+        nilIO =
+          return nil
+        justIO input =
+          do
+            currentState <- readIORef stateRef
+            case O.runState (stateFn input) currentState of
+              (output, newState) -> do
+                writeIORef stateRef newState
+                return (just output)
+        in join (fetchIO nilIO justIO)
+
+{-# INLINE list #-}
+list :: Transform [a] a
+list =
+  Transform $ \ (A.Fetch fetchListIO) -> do
     bufferRef <- newIORef []
     return $ A.Fetch $ \ nil just -> do
       buffer <- readIORef bufferRef
@@ -205,19 +228,17 @@ state stateFn initialState =
           return (just head)
         _ ->
           let
-            nilCase =
-              return nil
-            justCase input =
-              do
-                currentState <- readIORef stateRef
-                case O.runState (stateFn input) currentState of
-                  (outputList, newState) -> case outputList of
+            fetchElementIO =
+              let
+                nilIO =
+                  return nil
+                justIO input =
+                  case input of
                     head : tail -> do
                       writeIORef bufferRef tail
-                      writeIORef stateRef newState
                       return (just head)
                     _ -> do
                       writeIORef bufferRef []
-                      writeIORef stateRef newState
                       return nil
-            in join (fetchIO nilCase justCase)
+                in join (fetchListIO nilIO justIO)
+            in fetchElementIO

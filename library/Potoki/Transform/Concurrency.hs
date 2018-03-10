@@ -55,8 +55,11 @@ The order of the outputs produced is indiscriminate.
 {-# INLINABLE concurrently #-}
 concurrently :: Int -> Transform input output -> Transform input output
 concurrently workersAmount transform =
-  sync >>>
-  concurrentlyUnsafe workersAmount transform
+  if workersAmount == 1
+    then transform
+    else
+      sync >>>
+      concurrentlyUnsafe workersAmount transform
 
 {-# INLINE concurrentlyUnsafe #-}
 concurrentlyUnsafe :: Int -> Transform input output -> Transform input output

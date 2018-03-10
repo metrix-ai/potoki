@@ -14,8 +14,13 @@ import qualified Data.Text.IO as A
 
 
 {-# INLINABLE handleBytes #-}
-handleBytes :: Int -> Handle -> Fetch (Either IOException ByteString)
-handleBytes chunkSize handle =
+handleBytes :: Handle -> Fetch (Either IOException ByteString)
+handleBytes =
+  handleBytesWithChunkSize ioChunkSize
+
+{-# INLINABLE handleBytesWithChunkSize #-}
+handleBytesWithChunkSize :: Int -> Handle -> Fetch (Either IOException ByteString)
+handleBytesWithChunkSize chunkSize handle =
   Fetch $ \ nil just -> do
     chunk <- try (D.hGetSome handle chunkSize)
     case chunk of

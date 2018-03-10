@@ -58,7 +58,7 @@ Read from a file by path.
 {-# INLINABLE fileBytes #-}
 fileBytes :: FilePath -> Produce (Either IOException ByteString)
 fileBytes path =
-  accessingHandle (openBinaryFile path ReadMode) (A.handleBytes ioChunkSize)
+  accessingHandle (openBinaryFile path ReadMode) A.handleBytes
 
 {-|
 Read from a file by path.
@@ -69,7 +69,7 @@ Read from a file by path.
 {-# INLINABLE fileBytesAtOffset #-}
 fileBytesAtOffset :: FilePath -> Int -> Produce (Either IOException ByteString)
 fileBytesAtOffset path offset =
-  accessingHandle acquire (A.handleBytes ioChunkSize)
+  accessingHandle acquire A.handleBytes
   where
     acquire =
       do

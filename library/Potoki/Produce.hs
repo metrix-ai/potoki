@@ -58,13 +58,7 @@ Read from a file by path.
 {-# INLINABLE fileBytes #-}
 fileBytes :: FilePath -> Produce (Either IOException ByteString)
 fileBytes path =
-  Produce $ do
-    handleOpened <- try (openBinaryFile path ReadMode)
-    case handleOpened of
-      Right handle ->
-        return (A.handleBytes handle ioChunkSize, catchIOError (hClose handle) (const (return ())))
-      Left exception ->
-        return (pure (Left exception), return ())
+  accessingHandle (openBinaryFile path ReadMode) (A.handleBytes ioChunkSize)
 
 {-|
 Read from a file by path.
@@ -75,14 +69,24 @@ Read from a file by path.
 {-# INLINABLE fileBytesAtOffset #-}
 fileBytesAtOffset :: FilePath -> Int -> Produce (Either IOException ByteString)
 fileBytesAtOffset path offset =
-  Produce (catchIOError success failure)
+  accessingHandle acquire (A.handleBytes ioChunkSize)
   where
-    success =
+    acquire =
       do
         handle <- openBinaryFile path ReadMode
         hSeek handle AbsoluteSeek (fromIntegral offset)
-        return (A.handleBytes handle ioChunkSize, catchIOError (hClose handle) (const (return ())))
-    failure exception =
+        return handle
+
+{-# INLINABLE accessingHandle #-}
+accessingHandle :: IO Handle -> (Handle -> A.Fetch (Either IOException a)) -> Produce (Either IOException a)
+accessingHandle acquireHandle fetch =
+  Produce (catchIOError normal failing)
+  where
+    normal =
+      do
+        handle <- acquireHandle
+        return (fetch handle, catchIOError (hClose handle) (const (return ())))
+    failing exception =
       return (pure (Left exception), return ())
 
 {-|

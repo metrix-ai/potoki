@@ -8,6 +8,7 @@ module Potoki.Produce
   fileBytes,
   fileBytesAtOffset,
   fileText,
+  stdinBytes,
   directoryContents,
   finiteMVar,
   infiniteMVar,
@@ -88,6 +89,11 @@ accessingHandle acquireHandle fetch =
         return (fetch handle, catchIOError (hClose handle) (const (return ())))
     failing exception =
       return (pure (Left exception), return ())
+
+{-# INLINABLE stdinBytes #-}
+stdinBytes :: Produce (Either IOException ByteString)
+stdinBytes =
+  Produce (return (A.handleBytes stdin, return ()))
 
 {-|
 Sorted subpaths of the directory.

@@ -28,6 +28,8 @@ module Potoki.Transform
   -- * File IO
   deleteFile,
   appendBytesToFile,
+  -- * Debugging
+  traceWithCounter,
 )
 where
 
@@ -242,3 +244,15 @@ list =
                       return nil
                 in join (fetchListIO nilIO justIO)
             in fetchElementIO
+
+{-|
+Useful for debugging
+-}
+traceWithCounter :: (Int -> String) -> Transform a a
+traceWithCounter show =
+  ioTransform $ do
+    counter <- newIORef 0
+    return $ mapInIO $ \ x -> do
+      n <- atomicModifyIORef' counter (\ n -> (succ n, n))
+      putStrLn (show n)
+      return x

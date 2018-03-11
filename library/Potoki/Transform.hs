@@ -12,6 +12,7 @@ module Potoki.Transform
   filter,
   just,
   list,
+  vector,
   distinctBy,
   distinct,
   builderChunks,
@@ -46,6 +47,7 @@ import qualified Data.HashSet as C
 import qualified Data.ByteString.Builder as E
 import qualified Data.ByteString.Lazy as F
 import qualified Data.ByteString as J
+import qualified Data.Vector as P
 import qualified System.Directory as I
 import qualified Control.Concurrent.Chan.Unagi.Bounded as B
 import qualified Control.Monad.Trans.State.Strict as O
@@ -244,6 +246,23 @@ list =
                       return nil
                 in join (fetchListIO nilIO justIO)
             in fetchElementIO
+
+vector :: Transform (Vector a) a
+vector =
+  Transform $ \ (A.Fetch fetchVectorIO) -> do
+    indexRef <- newIORef 0
+    vectorRef <- newIORef mempty
+    return $ A.Fetch $ \ nil just -> fix $ \ loop -> do
+      vector <- readIORef vectorRef
+      index <- readIORef indexRef
+      if index < P.length vector
+        then do
+          writeIORef indexRef (succ index)
+          return (just (P.unsafeIndex vector index))
+        else join $ fetchVectorIO (return nil) $ \ vector -> do
+          writeIORef vectorRef vector
+          writeIORef indexRef 0
+          loop
 
 {-|
 Useful for debugging

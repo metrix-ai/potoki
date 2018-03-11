@@ -85,3 +85,14 @@ finiteMVar :: MVar (Maybe element) -> Fetch element
 finiteMVar var =
   Fetch $ \ nil just ->
   fmap (maybe nil just) (takeMVar var)
+
+{-# INLINABLE vector #-}
+vector :: IORef Int -> Vector element -> Fetch element
+vector indexRef vector =
+  Fetch $ \ nil just -> do
+    index <- readIORef indexRef
+    if index < C.length vector
+      then do
+        writeIORef indexRef (succ index)
+        return (just (C.unsafeIndex vector index))
+      else return nil

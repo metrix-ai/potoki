@@ -92,8 +92,7 @@ accessingHandle acquireHandle fetch =
 
 {-# INLINABLE stdinBytes #-}
 stdinBytes :: Produce (Either IOException ByteString)
-stdinBytes =
-  Produce (return (A.handleBytes stdin, return ()))
+stdinBytes = fileBytes "<stdin>"
 
 {-|
 Sorted subpaths of the directory.

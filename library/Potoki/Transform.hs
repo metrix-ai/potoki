@@ -8,6 +8,7 @@ module Potoki.Transform
   ioTransform,
   take,
   takeWhile,
+  drop,
   mapFilter,
   filter,
   just,
@@ -75,6 +76,19 @@ just =
 takeWhile :: (input -> Bool) -> Transform input input
 takeWhile predicate =
   Transform (pure . A.takeWhile predicate)
+
+{-# INLINE drop #-}
+drop :: Int -> Transform input input
+drop amount =
+  Transform $ \ (A.Fetch fetchIO) -> do
+    countRef <- newIORef amount
+    return $ A.Fetch $ \ nil just -> fix $ \ loop -> do
+      count <- readIORef countRef
+      if count > 0
+        then do
+          writeIORef countRef $! pred count
+          loop
+        else fetchIO nil just
 
 {-# INLINE mapWithParseResult #-}
 mapWithParseResult :: forall input parsed. (Monoid input, Eq input) => (input -> M.IResult input parsed) -> Transform input (Either Text parsed)

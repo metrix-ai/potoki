@@ -36,7 +36,7 @@ module Potoki.Transform
 )
 where
 
-import Potoki.Prelude hiding (take, takeWhile, filter)
+import Potoki.Prelude hiding (take, takeWhile, filter, drop)
 import Potoki.Core.Transform
 import qualified Potoki.Fetch as A
 import qualified Potoki.Core.Fetch as A

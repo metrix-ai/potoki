@@ -29,6 +29,7 @@ module Potoki.Transform
   -- * File IO
   deleteFile,
   appendBytesToFile,
+  writeTextToFile,
   -- * Debugging
   traceWithCounter,
 )
@@ -47,6 +48,7 @@ import qualified Data.HashSet as C
 import qualified Data.ByteString.Builder as E
 import qualified Data.ByteString.Lazy as F
 import qualified Data.ByteString as J
+import qualified Data.Text.IO as Q
 import qualified Data.Vector as P
 import qualified System.Directory as I
 import qualified Control.Concurrent.Chan.Unagi.Bounded as B
@@ -165,6 +167,13 @@ appendBytesToFile =
   try $ 
   withFile path AppendMode $ \ handle -> 
   J.hPut handle bytes
+
+{-# INLINABLE writeTextToFile #-}
+writeTextToFile :: Transform (FilePath, Text) (Either IOException ())
+writeTextToFile =
+  mapInIO $ \ (path, text) ->
+  try $ 
+  Q.writeFile path text
 
 {-# INLINE distinctBy #-}
 distinctBy :: (Eq comparable, Hashable comparable) => (element -> comparable) -> Transform element element

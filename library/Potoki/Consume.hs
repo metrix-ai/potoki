@@ -7,6 +7,7 @@ module Potoki.Consume
   head,
   list,
   reverseList,
+  vector,
   concat,
   fold,
   foldInIO,
@@ -54,6 +55,11 @@ reverseList =
   where
     build fetchIO !acc =
       join (fetchIO (pure acc) (\ element -> build fetchIO (element : acc)))
+
+{-# INLINABLE vector #-}
+vector :: Consume input (Vector input)
+vector =
+  foldInIO D.vectorM
 
 {-# INLINABLE count #-}
 count :: Consume input Int

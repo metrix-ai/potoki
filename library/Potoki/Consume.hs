@@ -5,11 +5,13 @@ module Potoki.Consume
   count,
   sum,
   head,
+  last,
   list,
   reverseList,
   vector,
   concat,
   fold,
+  execState,
   foldInIO,
   writeBytesToFile,
   appendBytesToFile,
@@ -23,7 +25,7 @@ module Potoki.Consume
 )
 where
 
-import Potoki.Prelude hiding (sum, head, fold, concat)
+import Potoki.Prelude hiding (sum, head, fold, concat, last)
 import Potoki.Core.Consume
 import qualified Potoki.Core.Fetch as A
 import qualified Potoki.Core.Produce as H
@@ -37,12 +39,18 @@ import qualified Data.Text.IO as K
 import qualified Control.Foldl as D
 import qualified System.Directory as G
 import qualified Potoki.Transform.Concurrency as B
+import qualified Control.Monad.Trans.State.Strict as O
 
 
 {-# INLINABLE head #-}
 head :: Consume input (Maybe input)
 head =
   Consume (\ (A.Fetch fetchIO) -> fetchIO Nothing Just)
+
+{-# INLINABLE last #-}
+last :: Consume input (Maybe input)
+last = 
+  fold D.last 
 
 {-|
 A faster alternative to "list",
@@ -140,6 +148,11 @@ fold (D.Fold step init finish) =
   where
     build fetch !accumulator =
       join (fetch (pure (finish accumulator)) (\ !input -> build fetch (step accumulator input)))
+
+{-# INLINE execState #-}
+execState :: (a -> O.State s b) -> s -> Consume a s
+execState stateFn initialState = 
+  fold $ D.Fold (\currentState input -> snd $ O.runState (stateFn input) currentState) initialState id
 
 {-# INLINABLE foldInIO #-}
 foldInIO :: D.FoldM IO input output -> Consume input output

@@ -19,7 +19,7 @@ module Potoki.Transform
   executeIO,
   mapInIO,
   -- * ByteString
-  B.builderChunks,
+  module Potoki.Transform.ByteString,
   -- * State
   R.runState,
   R.execState,
@@ -43,8 +43,8 @@ where
 import Potoki.Core.Transform
 import Potoki.Transform.Basic
 import Potoki.Transform.FileIO
+import Potoki.Transform.ByteString
 import qualified Potoki.Transform.Attoparsec as A
-import qualified Potoki.Transform.ByteString as B
 import qualified Potoki.Transform.Concurrency as N
 import qualified Potoki.Transform.State as R
 

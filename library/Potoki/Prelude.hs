@@ -3,6 +3,7 @@ module Potoki.Prelude
   module Exports,
   ioChunkSize,
   textString,
+  unsnoc,
 )
 where
 
@@ -54,3 +55,18 @@ ioChunkSize =
 textString :: Text -> String
 textString =
   A.unpack
+
+{-# INLINABLE unsnoc #-}
+unsnoc :: [a] -> Maybe ([a], a)
+unsnoc list =
+  case process list of
+    (init, lastMaybe) -> fmap (\ last -> (init, last)) lastMaybe
+  where
+    process list =
+      case list of
+        head : tail -> case tail of
+          [] -> ([], Just head)
+          _ -> case process tail of
+            (init, lastMaybe) -> (head : init, lastMaybe)
+        _ -> ([], Nothing)
+

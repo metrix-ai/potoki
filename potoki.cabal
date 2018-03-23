@@ -91,6 +91,7 @@ library
     hashable >=1 && <2,
     potoki-core >=1.5 && <1.6,
     profunctors >=5.2 && <6,
+    ptr >=0.16.2 && <0.17,
     text >=1 && <2,
     transformers >=0.5 && <0.6,
     unagi-chan >=0.4 && <0.5,

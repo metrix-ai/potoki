@@ -93,6 +93,20 @@ transform =
       assertBool "Is dispersed" (list /= result)
       assertEqual "Contains no duplicates" 0 (length result - length (nub result))
       assertEqual "Equals the original once sorted" list (sort result)
+    ,
+    testProperty "Line" $ \ chunks ->
+    let
+      expected =
+        mconcat chunks
+      actual =
+        unsafePerformIO (C.produceAndConsume produce consume)
+        where
+          produce =
+            E.list chunks
+          consume =
+            rmap (mconcat . intersperse "\n") $
+            D.transform A.extractLines D.list
+      in expected === actual
   ]
 
 parsing :: TestTree

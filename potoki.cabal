@@ -97,11 +97,11 @@ library
     unordered-containers >=0.2 && <0.3,
     vector >=0.12 && <0.13
 
-test-suite tests
+test-suite test
   type:
     exitcode-stdio-1.0
   hs-source-dirs:
-    tests
+    test
   main-is:
     Main.hs
   default-extensions:

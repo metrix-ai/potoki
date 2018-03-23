@@ -75,7 +75,12 @@ library
   other-modules:
     Potoki.Fetch
     Potoki.Prelude
+    Potoki.Transform.Attoparsec
+    Potoki.Transform.Basic
+    Potoki.Transform.ByteString
     Potoki.Transform.Concurrency
+    Potoki.Transform.FileIO
+    Potoki.Transform.State
   build-depends:
     attoparsec >=0.13 && <0.15,
     base >=4.7 && <5,

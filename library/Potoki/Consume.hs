@@ -11,8 +11,8 @@ module Potoki.Consume
   vector,
   concat,
   fold,
-  execState,
   foldInIO,
+  execState,
   writeBytesToFile,
   appendBytesToFile,
   deleteFiles,
@@ -149,11 +149,6 @@ fold (D.Fold step init finish) =
     build fetch !accumulator =
       join (fetch (pure (finish accumulator)) (\ !input -> build fetch (step accumulator input)))
 
-{-# INLINE execState #-}
-execState :: (a -> O.State s b) -> s -> Consume a s
-execState stateFn initialState = 
-  fold $ D.Fold (\currentState input -> snd $ O.runState (stateFn input) currentState) initialState id
-
 {-# INLINABLE foldInIO #-}
 foldInIO :: D.FoldM IO input output -> Consume input output
 foldInIO (D.FoldM step init finish) =
@@ -161,6 +156,11 @@ foldInIO (D.FoldM step init finish) =
   where
     build fetch !accumulator =
       join (fetch (finish accumulator) (\ !input -> step accumulator input >>= build fetch))
+
+{-# INLINE execState #-}
+execState :: (a -> O.State s b) -> s -> Consume a s
+execState stateFn initialState = 
+  fold $ D.Fold (\currentState input -> snd $ O.runState (stateFn input) currentState) initialState id
 
 {-# INLINABLE runParseResult #-}
 runParseResult :: (Monoid input, Eq input) => (input -> I.IResult input output) -> Consume input (Either Text output)

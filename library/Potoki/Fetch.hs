@@ -96,3 +96,11 @@ vector indexRef vector =
         writeIORef indexRef (succ index)
         return (just (C.unsafeIndex vector index))
       else return nil
+
+{-# INLINABLE handlingElements #-}
+handlingElements :: (element -> IO ()) -> Fetch element -> Fetch element
+handlingElements xRay (Fetch fetchIO) =
+  Fetch $ \ nil just ->
+    join $ fetchIO
+      (return nil)
+      (\ element -> xRay element $> just element)

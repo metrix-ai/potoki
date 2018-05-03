@@ -12,6 +12,8 @@ module Potoki.Consume
   concat,
   fold,
   foldInIO,
+  folding,
+  foldingInIO,
   execState,
   writeBytesToFile,
   appendBytesToFile,
@@ -31,6 +33,7 @@ import qualified Potoki.Core.Fetch as A
 import qualified Potoki.Core.Produce as H
 import qualified Potoki.Core.Transform as J
 import qualified Potoki.Core.IO as L
+import qualified Potoki.Fetch as A
 import qualified Data.ByteString as C
 import qualified Data.Attoparsec.ByteString as E
 import qualified Data.Attoparsec.Text as F
@@ -156,6 +159,30 @@ foldInIO (D.FoldM step init finish) =
   where
     build fetch !accumulator =
       join (fetch (finish accumulator) (\ !input -> step accumulator input >>= build fetch))
+
+{-# INLINABLE folding #-}
+folding :: D.Fold a b -> Consume a c -> Consume a (b, c)
+folding (D.Fold step init extract) (Consume consumeIO) =
+  Consume $ \ fetch -> do
+    foldStateRef <- newIORef init
+    consumptionResult <-
+      consumeIO (A.handlingElements (\ element -> do
+        !newState <- flip step element <$> readIORef foldStateRef
+        writeIORef foldStateRef newState) fetch)
+    foldResult <- extract <$> readIORef foldStateRef
+    return (foldResult, consumptionResult)
+
+{-# INLINABLE foldingInIO #-}
+foldingInIO :: D.FoldM IO a b -> Consume a c -> Consume a (b, c)
+foldingInIO (D.FoldM step init extract) (Consume consumeIO) =
+  Consume $ \ fetch -> do
+    foldStateRef <- newIORef =<< init
+    consumptionResult <-
+      consumeIO (A.handlingElements (\ element -> do
+        !newState <- flip step element =<< readIORef foldStateRef
+        writeIORef foldStateRef newState) fetch)
+    foldResult <- extract =<< readIORef foldStateRef
+    return (foldResult, consumptionResult)
 
 {-# INLINE execState #-}
 execState :: (a -> O.State s b) -> s -> Consume a s

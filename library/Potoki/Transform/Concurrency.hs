@@ -11,18 +11,19 @@ import Potoki.Core.Transform
 import qualified Potoki.Fetch as A
 import qualified Potoki.Core.Fetch as A
 import qualified Control.Concurrent.Chan.Unagi.Bounded as B
+import qualified Acquire.Acquire as M
 
 
 {-# INLINE bufferize #-}
 bufferize :: Int -> Transform element element
-bufferize size =
-  Transform $ \ (A.Fetch fetch) -> do
-    (inChan, outChan) <- B.newChan size
-    forkIO $ fix $ \ loop ->
-      join $ fetch
-        (B.writeChan inChan Nothing)
-        (\ !element -> B.writeChan inChan (Just element) >> loop)
-    return $ A.Fetch $ \ nil just -> fmap (maybe nil just) (B.readChan outChan)
+bufferize size = undefined
+  -- Transform $ M.Acquire $ \ (A.Fetch fetch) -> do
+  --   (inChan, outChan) <- B.newChan size
+  --   forkIO $ fix $ \ loop ->
+  --     join $ fetch
+  --       (B.writeChan inChan Nothing)
+  --       (\ !element -> B.writeChan inChan (Just element) >> loop)
+  --   return $ A.Fetch $ \ nil just -> fmap (maybe nil just) (B.readChan outChan)
 
 {-|
 Identity Transform, which ensures that the inputs are fetched synchronously.
@@ -32,9 +33,9 @@ Useful for concurrent transforms.
 {-# INLINABLE sync #-}
 sync :: Transform a a
 sync =
-  Transform $ \ (A.Fetch fetch) -> do
+  Transform $ M.Acquire $ do
     activeVar <- newMVar True
-    return $ A.Fetch $ \ nil just -> do
+    return $ (, return ()) $ \ (A.Fetch fetch) -> A.Fetch $ \ nil just -> do
       active <- takeMVar activeVar
       if active
         then join $ fetch
@@ -63,37 +64,37 @@ concurrently workersAmount transform =
 
 {-# INLINE concurrentlyUnsafe #-}
 concurrentlyUnsafe :: Int -> Transform input output -> Transform input output
-concurrentlyUnsafe workersAmount (Transform syncTransformIO) =
-  Transform $ \ fetch -> do
-    outChan <- newEmptyMVar
-    replicateM_ workersAmount $ forkIO $ do
-      A.Fetch fetchIO <- syncTransformIO fetch
-      fix $ \ loop -> join $ fetchIO
-        (putMVar outChan Nothing)
-        (\ !result -> putMVar outChan (Just result) >> loop)
-    activeWorkersAmountVar <- newMVar workersAmount
-    return $ A.Fetch $ \ nil just -> fix $ \ loop -> do
-      activeWorkersAmount <- takeMVar activeWorkersAmountVar
-      if activeWorkersAmount <= 0
-        then return nil
-        else do
-          fetchResult <- takeMVar outChan
-          case fetchResult of
-            Just result -> do
-              putMVar activeWorkersAmountVar activeWorkersAmount
-              return (just result)
-            Nothing -> do
-              putMVar activeWorkersAmountVar (pred activeWorkersAmount)
-              loop
+concurrentlyUnsafe workersAmount (Transform syncTransformIO) = undefined
+  -- Transform $ \ fetch -> do
+  --   outChan <- newEmptyMVar
+  --   replicateM_ workersAmount $ forkIO $ do
+  --     A.Fetch fetchIO <- syncTransformIO fetch
+  --     fix $ \ loop -> join $ fetchIO
+  --       (putMVar outChan Nothing)
+  --       (\ !result -> putMVar outChan (Just result) >> loop)
+  --   activeWorkersAmountVar <- newMVar workersAmount
+  --   return $ A.Fetch $ \ nil just -> fix $ \ loop -> do
+  --     activeWorkersAmount <- takeMVar activeWorkersAmountVar
+  --     if activeWorkersAmount <= 0
+  --       then return nil
+  --       else do
+  --         fetchResult <- takeMVar outChan
+  --         case fetchResult of
+  --           Just result -> do
+  --             putMVar activeWorkersAmountVar activeWorkersAmount
+  --             return (just result)
+  --           Nothing -> do
+  --             putMVar activeWorkersAmountVar (pred activeWorkersAmount)
+  --             loop
 
 {-|
 A transform, which fetches the inputs asynchronously on the specified number of threads.
 -}
 async :: Int -> Transform input input
-async workersAmount =
-  Transform $ \ (A.Fetch fetchIO) -> do
-    chan <- newEmptyMVar 
-    replicateM_ workersAmount $ forkIO $ fix $ \ loop -> do
-      fetchResult <- fetchIO Nothing Just
-      putMVar chan fetchResult
-    return (A.finiteMVar chan)
+async workersAmount = undefined
+  -- Transform $ \ (A.Fetch fetchIO) -> do
+  --   chan <- newEmptyMVar 
+  --   replicateM_ workersAmount $ forkIO $ fix $ \ loop -> do
+  --     fetchResult <- fetchIO Nothing Just
+  --     putMVar chan fetchResult
+  --   return (A.finiteMVar chan)

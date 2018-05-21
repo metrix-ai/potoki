@@ -14,6 +14,7 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Builder as E
 import qualified Data.ByteString.Lazy as F
 import qualified Control.Monad.Trans.State.Strict as O
+import qualified Acquire.Acquire as M
 
 
 {-# INLINE builderChunks #-}
@@ -31,10 +32,9 @@ extractLines =
   -- lineList >>> list
   where
     lineList =
-      Transform $ \ (A.Fetch fetchIO) ->
-      do
+      Transform $  M.Acquire $ do
         stateRef <- newIORef Nothing
-        return $ A.Fetch $ \ nil just -> join $ fetchIO
+        return $ (, return ()) $  \ (A.Fetch fetchIO) -> A.Fetch $ \ nil just -> join $ fetchIO
           (do
             state <- readIORef stateRef
             case state of

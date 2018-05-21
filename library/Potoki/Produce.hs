@@ -28,12 +28,13 @@ import qualified Data.HashMap.Strict as B
 import qualified Data.ByteString as D
 import qualified Data.Vector as C
 import qualified System.Directory as G
+import qualified Acquire.Acquire as M
 
 
 {-# INLINE vector #-}
 vector :: Vector input -> Produce input
 vector vector =
-  Produce $ do
+  Produce $ M.Acquire $ do
     indexRef <- newIORef 0
     let
       fetch =
@@ -81,7 +82,7 @@ fileBytesAtOffset path offset =
 {-# INLINABLE accessingHandle #-}
 accessingHandle :: IO Handle -> (Handle -> A.Fetch (Either IOException a)) -> Produce (Either IOException a)
 accessingHandle acquireHandle fetch =
-  Produce (catchIOError normal failing)
+  Produce $ M.Acquire (catchIOError normal failing)
   where
     normal =
       do
@@ -93,7 +94,7 @@ accessingHandle acquireHandle fetch =
 {-# INLINABLE stdinBytes #-}
 stdinBytes :: Produce (Either IOException ByteString)
 stdinBytes =
-  Produce (return (A.handleBytes stdin, return ()))
+  Produce $ M.Acquire (return (A.handleBytes stdin, return ()))
 
 {-|
 Sorted subpaths of the directory.
@@ -101,7 +102,7 @@ Sorted subpaths of the directory.
 {-# INLINABLE directoryContents #-}
 directoryContents :: FilePath -> Produce (Either IOException FilePath)
 directoryContents path =
-  Produce (catchIOError success failure)
+  Produce $ M.Acquire (catchIOError success failure)
   where
     success =
       do
@@ -120,7 +121,7 @@ Read from a file by path.
 {-# INLINABLE fileText #-}
 fileText :: FilePath -> Produce (Either IOException Text)
 fileText path =
-  Produce (catchIOError success failure)
+  Produce $ M.Acquire (catchIOError success failure)
   where
     success =
       do
@@ -136,7 +137,7 @@ Nothing gets interpreted as the end of input.
 {-# INLINE finiteMVar #-}
 finiteMVar :: MVar (Maybe element) -> Produce element
 finiteMVar var =
-  Produce (return (A.finiteMVar var, return ()))
+  Produce $ M.Acquire (return (A.finiteMVar var, return ()))
 
 {-|
 Read from MVar.
@@ -145,4 +146,4 @@ Never stops.
 {-# INLINE infiniteMVar #-}
 infiniteMVar :: MVar element -> Produce element
 infiniteMVar var =
-  Produce (return (A.infiniteMVar var, return ()))
+  Produce $ M.Acquire (return (A.infiniteMVar var, return ()))

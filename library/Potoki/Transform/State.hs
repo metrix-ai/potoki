@@ -7,6 +7,7 @@ import qualified Potoki.Fetch as A
 import qualified Potoki.Core.Fetch as A
 import qualified Data.ByteString as B
 import qualified Control.Monad.Trans.State.Strict as O
+import qualified Acquire.Acquire as M
 
 
 {-|
@@ -17,9 +18,9 @@ the "list" transform.
 {-# INLINE runState #-}
 runState :: (a -> O.State s b) -> s -> Transform a (s, b)
 runState stateFn initialState =
-  Transform $ \ (A.Fetch fetchIO) -> do
+  Transform $ M.Acquire $ do
     stateRef <- newIORef initialState
-    return $ A.Fetch $ \ nil just -> do
+    return $ (, return ()) $ \ (A.Fetch fetchIO) -> A.Fetch $ \ nil just -> do
       let
         nilIO =
           return nil

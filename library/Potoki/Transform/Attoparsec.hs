@@ -9,16 +9,16 @@ import qualified Potoki.Core.Fetch as A
 import qualified Data.Attoparsec.ByteString as K
 import qualified Data.Attoparsec.Text as L
 import qualified Data.Attoparsec.Types as M
+import qualified Acquire.Acquire as N
 
 
 {-# INLINE mapWithParseResult #-}
 mapWithParseResult :: forall input parsed. (Monoid input, Eq input) => (input -> M.IResult input parsed) -> Transform input (Either Text parsed)
 mapWithParseResult inputToResult =
-  Transform $ \ inputFetch ->
-  do
+  Transform $ N.Acquire $ do
     unconsumedRef <- newIORef mempty
     finishedRef <- newIORef False
-    return (A.Fetch (fetchParsed inputFetch finishedRef unconsumedRef))
+    return (\inputFetch -> A.Fetch (fetchParsed inputFetch finishedRef unconsumedRef), return ())
   where
     fetchParsed :: A.Fetch input -> IORef Bool -> IORef input -> forall x. x -> (Either Text parsed -> x) -> IO x
     fetchParsed (A.Fetch inputFetchIO) finishedRef unconsumedRef nil just =

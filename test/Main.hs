@@ -3,10 +3,12 @@ module Main where
 import Prelude hiding (first, second)
 import Control.Arrow
 import Test.QuickCheck.Instances
+import Test.QuickCheck.Monadic as M
 import Test.Tasty
 import Test.Tasty.Runners
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
+import Data.Vector (fromList)
 import qualified Potoki.IO as C
 import qualified Potoki.Consume as D
 import qualified Potoki.Transform as A
@@ -15,6 +17,8 @@ import qualified Data.Attoparsec.ByteString.Char8 as B
 import qualified Data.ByteString as F
 import qualified Data.Vector as G
 import qualified System.Random as H
+import qualified Potoki.Core.Fetch as Fe
+import qualified Potoki.Core.Consume as Co
 
 
 main =
@@ -48,6 +52,8 @@ main =
     transform
     ,
     parsing
+    ,
+    consume
   ]
 
 transform :: TestTree
@@ -135,4 +141,63 @@ parsing =
       consume = D.transform transform D.count
       in do
         assertEqual "" 3 =<< C.produceAndConsume produce consume
+  ]
+
+consume =
+  testGroup "Consume" $
+  [
+    testProperty "count" $ \ (list :: [Int]) ->
+    let n = length list
+    in monadicIO $ do
+      let prod = E.list list
+      len <- run (C.produceAndConsume prod D.count)
+      M.assert (len == n)
+    ,
+    testProperty "sum" $ \ (list :: [Int]) ->
+    let n = sum list
+    in monadicIO $ do
+      let prod = E.list list
+      len <- run (C.produceAndConsume prod D.sum)
+      M.assert (len == n)
+    ,
+    testProperty "head" $ \ (list :: [Int]) ->
+    let el = if null list then Nothing else (Just (head list))
+    in monadicIO $ do
+      let prod = E.list list
+      he <- run (C.produceAndConsume prod D.head)
+      M.assert (he == el)
+    ,
+    testProperty "last" $ \ (list :: [Int]) ->
+    let el = if null list then Nothing else (Just (last list))
+    in monadicIO $ do
+      let prod = E.list list
+      he <- run (C.produceAndConsume prod D.last)
+      M.assert (he == el)
+    ,
+    testProperty "list" $ \ (list :: [Int]) ->
+    monadicIO $ do
+      let prod = E.list list
+      res <- run (C.produceAndConsume prod D.list)
+      M.assert (res == list)
+    ,
+    testProperty "reverseList" $ \ (list :: [Int]) ->
+    let revList = reverse list
+    in monadicIO $ do
+      let prod = E.list list
+      res <- run (C.produceAndConsume prod D.reverseList)
+      M.assert (res == revList)
+    ,
+    testProperty "vector" $ \ (list :: [Int]) ->
+    let vec = fromList list
+    in monadicIO $ do
+      let prod = E.list list
+      res <- run (C.produceAndConsume prod D.vector)
+      M.assert (res == vec)
+    ,
+    testProperty "concat" $ \ (list :: [[Int]]) ->
+    let con = concat list
+    in monadicIO $ do
+      let prod = E.list list
+      res <- run (C.produceAndConsume prod D.concat)
+      M.assert (res == con)
   ]

@@ -9,6 +9,7 @@ import Test.Tasty.Runners
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 import Data.Vector (fromList)
+import qualified Control.Foldl as Fl
 import qualified Potoki.IO as C
 import qualified Potoki.Consume as D
 import qualified Potoki.Transform as A
@@ -200,4 +201,29 @@ consume =
       let prod = E.list list
       res <- run (C.produceAndConsume prod D.concat)
       M.assert (res == con)
+    ,
+    testProperty "fold" $ \ (list :: [Int], fun :: (Fun (Int, Int) Int), first :: Int) ->
+    let f = applyFun2 fun
+        fol = foldl' f first list
+    in monadicIO $ do
+      let prod = E.list list
+      res <- run (C.produceAndConsume prod (D.fold (Fl.Fold f first id)))
+      M.assert (res == fol)
+    ,
+    -- testProperty "foldInIO" $ \ (list :: [Int], fun :: (Fun (Int, Int) Int), first :: Int) ->
+    -- let fIO = (\b a -> print a)
+    --     fol = foldM fIO first list
+    -- in monadicIO $ do
+    --   let prod = E.list list
+    --   res <- run (C.produceAndConsume prod (D.foldInIO (Fl.FoldM fIO (pure first) id)))
+    --   M.assert (res == fol)
+    -- ,
+    testProperty "folding" $ \ (list :: [Int], fun :: (Fun (Int, Int) Int), first :: Int) ->
+    let f = applyFun2 fun
+        fol = foldl f first list
+    in monadicIO $ do
+      let prod = E.list list
+      res <- run (C.produceAndConsume prod (D.folding (Fl.Fold f first id) (D.sum) ))
+      a <- run (C.produceAndConsume prod D.sum)
+      M.assert (res == (fol, a))
   ]

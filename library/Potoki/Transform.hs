@@ -19,18 +19,19 @@ module Potoki.Transform
   executeIO,
   mapInIO,
   -- * ByteString
-  module Potoki.Transform.ByteString,
+  builderChunks,
+  extractLines,
   -- * State
-  R.runState,
-  R.execState,
-  R.evalState,
+  runState,
+  execState,
+  evalState,
   -- * Parsing
-  A.parseBytes,
-  A.parseText,
+  parseBytes,
+  parseText,
   -- * Concurrency
-  N.bufferize,
-  N.concurrently,
-  N.async,
+  bufferize,
+  concurrently,
+  async,
   -- * File IO
   deleteFile,
   appendBytesToFile,
@@ -41,10 +42,4 @@ module Potoki.Transform
 where
 
 import Potoki.Core.Transform
-import Potoki.Transform.Basic
-import Potoki.Transform.FileIO
-import Potoki.Transform.ByteString
-import qualified Potoki.Transform.Attoparsec as A
-import qualified Potoki.Transform.Concurrency as N
-import qualified Potoki.Transform.State as R
 

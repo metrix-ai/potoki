@@ -12,6 +12,7 @@ module Potoki.Produce
   directoryContents,
   finiteMVar,
   infiniteMVar,
+  enumInRange,
 )
 where
 

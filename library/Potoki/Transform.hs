@@ -21,6 +21,7 @@ module Potoki.Transform
   -- * ByteString
   builderChunks,
   extractLines,
+  extractLinesWithoutTrail,
   -- * State
   runState,
   execState,
@@ -28,6 +29,8 @@ module Potoki.Transform
   -- * Parsing
   parseBytes,
   parseText,
+  parseLineBytesConcurrently,
+  parseNonEmptyLineBytesConcurrently,
   -- * Concurrency
   bufferize,
   concurrently,

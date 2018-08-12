@@ -27,6 +27,7 @@ module Potoki.Transform
   execState,
   evalState,
   -- * Parsing
+  scan,
   parseBytes,
   parseText,
   parseLineBytesConcurrently,

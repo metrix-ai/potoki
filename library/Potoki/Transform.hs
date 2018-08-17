@@ -35,6 +35,7 @@ module Potoki.Transform
   -- * Concurrency
   bufferize,
   concurrently,
+  unsafeConcurrently,
   async,
   -- * File IO
   deleteFile,

@@ -42,6 +42,9 @@ module Potoki.Transform
   appendBytesToFile,
   writeTextToFile,
   -- * Debugging
+  count,
+  mapInIOWithCounter,
+  handleCount,
   traceWithCounter,
 )
 where

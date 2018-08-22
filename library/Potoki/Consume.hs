@@ -16,6 +16,7 @@ module Potoki.Consume
   foldingInIO,
   execState,
   writeBytesToFile,
+  writeBytesToFileWithoutBuffering,
   appendBytesToFile,
   deleteFiles,
   printBytes,

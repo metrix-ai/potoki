@@ -14,6 +14,7 @@ module Potoki.Transform
   just,
   list,
   vector,
+  chunk,
   distinctBy,
   distinct,
   executeIO,

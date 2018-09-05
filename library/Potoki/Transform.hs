@@ -39,6 +39,7 @@ module Potoki.Transform
   concurrently,
   unsafeConcurrently,
   async,
+  concurrentlyWithBatching,
   -- * File IO
   deleteFile,
   appendBytesToFile,

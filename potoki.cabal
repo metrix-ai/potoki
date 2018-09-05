@@ -73,5 +73,5 @@ library
     Potoki.Produce
     Potoki.Transform
   build-depends:
-    potoki-core >=2.2.11 && <2.3
+    potoki-core >=2.2.12 && <2.3
 

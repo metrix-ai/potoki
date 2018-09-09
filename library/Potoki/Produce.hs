@@ -4,6 +4,7 @@ module Potoki.Produce
   transform,
   list,
   vector,
+  vectorWithIndices,
   hashMapRows,
   fileBytes,
   fileBytesAtOffset,

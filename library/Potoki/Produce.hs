@@ -14,6 +14,7 @@ module Potoki.Produce
   finiteMVar,
   infiniteMVar,
   enumInRange,
+  mergeOrdering,
 )
 where
 

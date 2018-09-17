@@ -23,6 +23,7 @@ module Potoki.Transform
   builderChunks,
   extractLines,
   extractLinesWithoutTrail,
+  extractLinesConcurrently,
   -- * State
   runState,
   execState,
@@ -37,9 +38,11 @@ module Potoki.Transform
   bufferize,
   bufferizeFlushing,
   concurrently,
+  concurrentlyInOrder,
   unsafeConcurrently,
   async,
   concurrentlyWithBatching,
+  concurrentlyInOrderWithBatching,
   -- * File IO
   deleteFile,
   appendBytesToFile,

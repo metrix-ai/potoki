@@ -19,6 +19,8 @@ module Potoki.Transform
   distinct,
   executeIO,
   mapInIO,
+  reportProgress,
+  handleProgressAndCountOnInterval,
   -- * ByteString
   builderChunks,
   extractLines,

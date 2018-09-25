@@ -15,6 +15,7 @@ module Potoki.Produce
   infiniteMVar,
   enumInRange,
   mergeOrdering,
+  unfoldr,
 )
 where
 

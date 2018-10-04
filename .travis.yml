@@ -4,10 +4,6 @@ env:
   - ghc=8.4.2 benchmarks=1 tests=1
   - ghc=8.6.1
 
-matrix:
-  allow_failures:
-  - env: ghc=8.6.1
-
 install:
   # Set up the Shell to treat the semicolon as &&
   - set -o pipefail && set -e
@@ -34,6 +30,8 @@ install:
       constraint_options=(
       );
     fi;
+  # Install the "haskell-src-exts" implicit dependency
+  - cabal install happy --reorder-goals --force-reinstalls ${constraint_options[@]}
   # Install the library dependencies
   - cabal install --only-dependencies --reorder-goals --force-reinstalls
       ${constraint_options[@]}

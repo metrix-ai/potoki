@@ -13,6 +13,8 @@ module Potoki.Produce
   directoryContents,
   finiteMVar,
   infiniteMVar,
+  tbmChan,
+  tmChan,
   enumInRange,
   mergeOrdering,
   unfoldr,
